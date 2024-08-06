@@ -1,7 +1,0 @@
-#!pip install transformers
-#!pip install transformers[sentencepiece]
-
-#sentiment analysis
-from transformers import pipeline
-classifier = pipeline("sentiment-analysis")
-classifier("I love creating interfaces with angular")
