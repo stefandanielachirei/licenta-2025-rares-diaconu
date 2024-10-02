@@ -36,7 +36,7 @@ services:
     container_name: nginx
     volumes:
       - /d/Facultate/AN4/Licenta/nginx-1.27.1/conf/nginx.conf:/etc/nginx/nginx.conf
-      - ./goodreads/dist/goodreads:/usr/share/nginx/html  # Build-ul aplicatiei Angular
+      - /d/Facultate/AN4/Licenta/frontend/goodreads/dist/goodreads:/usr/share/nginx/html  # Build-ul aplicatiei Angular
     ports:
       - "80:80"
     depends_on:
