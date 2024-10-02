@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import os
+from flask import jsonify
 
 app = Flask(__name__)
 
@@ -20,14 +21,14 @@ class Test(db.Model):
         return f'<User {self.username}>'
 
 # Ruta principală
-@app.route('/')
+@app.route('/api/text', methods=['GET'])
 def index():
     # Preluăm primul rând din tabelă (sau toate rândurile, după nevoie)
     first_entry = Test.query.first()  # Sau `.all()` pentru toate rândurile
     if first_entry:
-        return f"Text from DB: {first_entry.text}"
+        return jsonify({"text": first_entry.text})
     else:
-        return "No entries found in the database!"
+        return jsonify({"error": "No entries found in the database!"}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug = True)
