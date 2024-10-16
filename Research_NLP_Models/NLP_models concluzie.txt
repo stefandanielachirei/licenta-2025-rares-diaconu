@@ -1,0 +1,9 @@
+Text Summarization: Pe partea asta am gasit "facebook/bart-large-cnn" model, este cel mai 		    	    mare si cel mai folosit si cred ca vom merge cu el inainte. Din ce am 		    	    testat merge si cu texte mai lungi pe care de exemplu modelul pentru 		    	    sentiment analysis nu il poate analiza.
+		    https://huggingface.co/facebook/bart-large-cnn
+Sentiment Analysis: Am gasit modelul bert-base-multilingual-uncased-sentiment care reuseste 		    sa analizeze sentimentele de la very negative la very positive avand 5 		    parametrii la iesire. 
+		    Problema este ca din cele pe care le-am gasit niciunul nu analizeaza pe 		    mai mult de 512 de caractere/size of tensor b si din aceasta cauza un 		    review trebuie analizat pe bucati si facut o medie. Am facut o functie 		    care imparte textul in bucati mai mici de 512 caractere si am reusit sa 		    analizez in acest mod si vom merge mai departe cu modelul si functia 		    facuta.
+		    https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment
+Text similarity: Am gasit modelul sentence-transformers/all-MiniLM-L6-v2 care reuseste sa 			analizeze similaritatea dintre 2 texte destul de mari si primesc un tensor 			care conține embedding-uri pentru fiecare propoziție pe care am introdus-o. 			Apoi am analizat-o cu similaritatea cosinusului si am primit o valoare prin 			care se deduce cat de similare sunt textele.
+		https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+Booksum dataset pentru antrenare: Am gasit acest model care este antrenat pe 436 de carti si cum am vorbit, putem sa il antrenam inca 10 iteratii si apoi sa il folosim in sumarizare pentru a invata si cum antrenez un model de nlp. https://huggingface.co/pszemraj/led-large-book-summary
+Dataset : vom folosi goodbooks 10k de la kaggle, sunt destule carti si avem ratings, book-	  tags, books, tags si to_read de unde sa alegem doar ca trebuie facut cont
