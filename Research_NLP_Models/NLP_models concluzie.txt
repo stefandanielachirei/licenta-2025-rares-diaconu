@@ -13,4 +13,8 @@ https://gitee.com/mecount/fairseq/blob/master/examples/bart/README.summarization
 https://sparknlp.org/2023/04/09/bart_large_cnn_en.html
 https://www.youtube.com/watch?v=CDmPBsZ09wg - tutorial antrenare model
 Am incercat sa scriu ceva cod pentru antrenare dar mai greu sa adaug cartile in colab insa am scris ceva cod dar am vrut sa astept poate le voi da upload la carti direct pe serverul cu cele 4 t100 si ma apuc direct acolo. Asta ar fi primul pas sa am cartile sa le sortez si apoi sa tokenizez si sa preprocesez datele si apoi sa antrenez modelul.
+Am citit si despre cosine similarity un pic si am mai aprofundat si vom folosi la sentence similarity cand vom ajunge acolo. Am folosit aceste link-uri: 
+https://www.sciencedirect.com/topics/computer-science/cosine-similarity
+https://www.geeksforgeeks.org/cosine-similarity/
+https://www.datastax.com/guides/what-is-cosine-similarity
 
