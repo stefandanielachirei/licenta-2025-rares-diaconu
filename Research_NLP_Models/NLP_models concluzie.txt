@@ -5,5 +5,12 @@ Sentiment Analysis: Am gasit modelul bert-base-multilingual-uncased-sentiment ca
 		    https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment
 Text similarity: Am gasit modelul sentence-transformers/all-MiniLM-L6-v2 care reuseste sa 			analizeze similaritatea dintre 2 texte destul de mari si primesc un tensor 			care conține embedding-uri pentru fiecare propoziție pe care am introdus-o. 			Apoi am analizat-o cu similaritatea cosinusului si am primit o valoare prin 			care se deduce cat de similare sunt textele.
 		https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
-Booksum dataset pentru antrenare: Am gasit acest model care este antrenat pe 436 de carti si cum am vorbit, putem sa il antrenam inca 10 iteratii si apoi sa il folosim in sumarizare pentru a invata si cum antrenez un model de nlp. https://huggingface.co/pszemraj/led-large-book-summary
+
 Dataset : vom folosi goodbooks 10k de la kaggle, sunt destule carti si avem ratings, book-	  tags, books, tags si to_read de unde sa alegem doar ca trebuie facut cont
+
+Model de antrenat: M-am interesat si a trebuit sa aleg un model encoder-decoder care este antrenat pentru mai multe task-uri pe text si care interactioneaza cu utilizatorul si am gasit modelul https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct. Acest model are ca prima functie generarea de text dar poate fi antrenat si pe sumarizare desi nu a fost antrenat pe asta pana acum. Pe partea de documentatie am gasit acest link https://huggingface.co/docs/transformers/en/tasks/summarization ce explica cum sa fine-tunam orice model si cu tensorflow si cu PyTorch cu care preferam. Mai sunt si aceste link-uri pentru fine-tuning(cod, tutoriale si documentatii) https://github.com/huggingface/transformers/tree/main/examples/pytorch/summarization
+https://gitee.com/mecount/fairseq/blob/master/examples/bart/README.summarization.md
+https://sparknlp.org/2023/04/09/bart_large_cnn_en.html
+https://www.youtube.com/watch?v=CDmPBsZ09wg - tutorial antrenare model
+Am incercat sa scriu ceva cod pentru antrenare dar mai greu sa adaug cartile in colab.
+
