@@ -18,7 +18,7 @@ def preprocess_function(examples):
     model_inputs["labels"] = [
         [(label if label != tokenizer.pad_token_id else -100) for label in lbl]
         for lbl in model_inputs["labels"]
-    ]  # Setăm -100 unde este padding pentru a ignora aceste valori la calculul pierderii
+    ]
 
     return model_inputs
 
