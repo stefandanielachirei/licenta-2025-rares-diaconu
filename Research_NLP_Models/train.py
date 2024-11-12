@@ -62,7 +62,7 @@ else:
 dataset_path = r"K:\Work\Rares\all_chapterized_books"
 
 data = []
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-1.5B-Instruct")  # Inițializează tokenizerul pentru modelul folosit
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-1.5B-Instruct")
 
 for book_folder in os.listdir(dataset_path):
     book_path = os.path.join(dataset_path, book_folder)
@@ -81,16 +81,6 @@ for book_folder in os.listdir(dataset_path):
         input_text = "\n\n".join(chapters)
         summary_text = "Acesta este sumarul cărții."
 
-        # Tokenizează textele pentru a verifica numărul de tokeni
-        input_tokens = tokenizer(input_text, truncation=False)["input_ids"]
-        summary_tokens = tokenizer(summary_text, truncation=False)["input_ids"]
-
-        # Verifică dacă depășesc numărul maxim permis de tokeni
-        if len(input_tokens) > max_length_allowed or len(summary_tokens) > max_length_allowed:
-            print("Exemplu exclus: lungime excesivă a textului.")
-            continue
-
-        # Adaugă exemplul la dataset dacă este valid
         data.append({
             "input_text": input_text,
             "summary_text": summary_text
