@@ -18,3 +18,50 @@ https://www.sciencedirect.com/topics/computer-science/cosine-similarity
 https://www.geeksforgeeks.org/cosine-similarity/
 https://www.datastax.com/guides/what-is-cosine-similarity
 
+
+
+Am configurat env-ul pe HPC cu tot ce trebuie, am incarcat cartile acum trebuie doar sa le aranjez ca sa le folosesc si cele 3 script-uri pentru modelele pe care le vom importa.
+
+https://www.kaggle.com/datasets/zygmunt/goodbooks-10k?select=tags.csv
+https://www.tensorflow.org/datasets/catalog/booksum
+
+Model deployment
+
+- link-uri de unde am citit si mai jos sunt ideile principale : 
+	- https://builtin.com/machine-learning/model-deployment
+	- https://www.kdnuggets.com/deploying-machine-learning-models-a-step-by-step-tutorial
+	- https://www.qwak.com/post/what-does-it-take-to-deploy-ml-models-in-production
+	- https://www.projectpro.io/article/machine-learning-model-deployment/872
+	- https://aws.amazon.com/what-is/mlops/
+	- https://ml-ops.org/
+	- https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning
+	- https://www.youtube.com/watch?app=desktop&v=rgr_aCg-338
+	- https://www.youtube.com/watch?v=Gs15V79cauo
+	- https://www.youtube.com/watch?v=vA0C0k72-b4
+
+ - data preprocessing -> model training -> model testing
+					<- 
+					-> model packaging -> model testing -> model deployment
+- ML model deployment is just as important as ML model development.  -> pentru ca daca nu il si folosim degeaba am antrenat acel model
+
+model.save("trained_model") in tensorflow
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+}, "trained_model.pth") in torch
+
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+model.save_pretrained("model_directory")
+tokenizer.save_pretrained("model_directory") pentru cele care folosesc transformers
+
+Cred ca pentru doar un proiect de licenta putem face totul pe hpc unde sa il antrenam si apoi sa il folosim tot acolo, luandu-l din director. Trebuie ca in director sa avem aceste fisiere: 
+	- config.json
+	- pytorch_model.bin/tf_model.h5
+	- tokenizer_config.json
+	- vocab.txt/tokenizer.json
+	- special_tokens_map.json
+Si il vom folosi cu cereri api din fastapi(schimbat de la flask) direct din director.
+Daca vrem sa il folosim si in alte locuri nu doar pe HPC, va trebuie sa folosim docker pentru portabilitate si ajuta la pastrarea dependentelor de pe un pc pe altul. Cred ca cel mai bine este sa il punem in docker direct si apoi sa il folosim de oriunde dupa ce terminam de antrenat modelul.
+
+
