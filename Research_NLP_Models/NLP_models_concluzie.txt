@@ -135,3 +135,7 @@ Daca vrem sa il folosim si in alte locuri nu doar pe HPC, va trebuie sa folosim 
 
 
 >>>>>>> dbab91eacac44fef15f6b5bb7f712bd5254f5d10
+
+care este limita de input token la Llama-3.1-8B-Instruct(2048) si la Qwen2.5-1.5B-Instruct de gasit si daca este mai mic, sa schimbam si aici si in raport
+
+Am analizat limitele de token-uri de intrare de la fiecare model din top de pe hugging face de la text generation si am realizat ca l-am ales pe cel mai bun de prima data. Qwen2.5-1.5B-Instruct are suport pentru texte foarte lungi de pana la 32768 tokeni ceea ce il face ideal pentru task-ul de sumarizare pe dataset-ul booksum. Vom ramane cu acesta si il vom face sa mearga cumva.
