@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Text Summarization: Pe partea asta am gasit "facebook/bart-large-cnn" model, este cel mai 		    	    mare si cel mai folosit si cred ca vom merge cu el inainte. Din ce am 		    	    testat merge si cu texte mai lungi pe care de exemplu modelul pentru 		    	    sentiment analysis nu il poate analiza.
 		    https://huggingface.co/facebook/bart-large-cnn
 Sentiment Analysis: Am gasit modelul bert-base-multilingual-uncased-sentiment care reuseste 		    sa analizeze sentimentele de la very negative la very positive avand 5 		    parametrii la iesire. 
@@ -65,3 +66,72 @@ Si il vom folosi cu cereri api din fastapi(schimbat de la flask) direct din dire
 Daca vrem sa il folosim si in alte locuri nu doar pe HPC, va trebuie sa folosim docker pentru portabilitate si ajuta la pastrarea dependentelor de pe un pc pe altul. Cred ca cel mai bine este sa il punem in docker direct si apoi sa il folosim de oriunde dupa ce terminam de antrenat modelul.
 
 
+=======
+Text Summarization: Pe partea asta am gasit "facebook/bart-large-cnn" model, este cel mai 		    	    mare si cel mai folosit si cred ca vom merge cu el inainte. Din ce am 		    	    testat merge si cu texte mai lungi pe care de exemplu modelul pentru 		    	    sentiment analysis nu il poate analiza.
+		    https://huggingface.co/facebook/bart-large-cnn
+Sentiment Analysis: Am gasit modelul bert-base-multilingual-uncased-sentiment care reuseste 		    sa analizeze sentimentele de la very negative la very positive avand 5 		    parametrii la iesire. 
+		    Problema este ca din cele pe care le-am gasit niciunul nu analizeaza pe 		    mai mult de 512 de caractere/size of tensor b si din aceasta cauza un 		    review trebuie analizat pe bucati si facut o medie. Am facut o functie 		    care imparte textul in bucati mai mici de 512 caractere si am reusit sa 		    analizez in acest mod si vom merge mai departe cu modelul si functia 		    facuta.
+		    https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment
+Text similarity: Am gasit modelul sentence-transformers/all-MiniLM-L6-v2 care reuseste sa 			analizeze similaritatea dintre 2 texte destul de mari si primesc un tensor 			care conține embedding-uri pentru fiecare propoziție pe care am introdus-o. 			Apoi am analizat-o cu similaritatea cosinusului si am primit o valoare prin 			care se deduce cat de similare sunt textele.
+		https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+
+Dataset : vom folosi goodbooks 10k de la kaggle, sunt destule carti si avem ratings, book-	  tags, books, tags si to_read de unde sa alegem doar ca trebuie facut cont
+
+Model de antrenat: M-am interesat si a trebuit sa aleg un model encoder-decoder care este antrenat pentru mai multe task-uri pe text si care interactioneaza cu utilizatorul si am gasit modelul https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct. Acest model are ca prima functie generarea de text dar poate fi antrenat si pe sumarizare desi nu a fost antrenat pe asta pana acum. Pe partea de documentatie am gasit acest link https://huggingface.co/docs/transformers/en/tasks/summarization ce explica cum sa fine-tunam orice model si cu tensorflow si cu PyTorch cu care preferam. Mai sunt si aceste link-uri pentru fine-tuning(cod, tutoriale si documentatii) https://github.com/huggingface/transformers/tree/main/examples/pytorch/summarization
+https://gitee.com/mecount/fairseq/blob/master/examples/bart/README.summarization.md
+https://sparknlp.org/2023/04/09/bart_large_cnn_en.html
+https://www.youtube.com/watch?v=CDmPBsZ09wg - tutorial antrenare model
+Am incercat sa scriu ceva cod pentru antrenare dar mai greu sa adaug cartile in colab insa am scris ceva cod dar am vrut sa astept poate le voi da upload la carti direct pe serverul cu cele 4 t100 si ma apuc direct acolo. Asta ar fi primul pas sa am cartile sa le sortez si apoi sa tokenizez si sa preprocesez datele si apoi sa antrenez modelul.
+Am citit si despre cosine similarity un pic si am mai aprofundat si vom folosi la sentence similarity cand vom ajunge acolo. Am folosit aceste link-uri: 
+https://www.sciencedirect.com/topics/computer-science/cosine-similarity
+https://www.geeksforgeeks.org/cosine-similarity/
+https://www.datastax.com/guides/what-is-cosine-similarity
+
+
+
+Am configurat env-ul pe HPC cu tot ce trebuie, am incarcat cartile acum trebuie doar sa le aranjez ca sa le folosesc si cele 3 script-uri pentru modelele pe care le vom importa.
+
+https://www.kaggle.com/datasets/zygmunt/goodbooks-10k?select=tags.csv
+https://www.tensorflow.org/datasets/catalog/booksum
+
+Model deployment
+
+- link-uri de unde am citit si mai jos sunt ideile principale : 
+	- https://builtin.com/machine-learning/model-deployment
+	- https://www.kdnuggets.com/deploying-machine-learning-models-a-step-by-step-tutorial
+	- https://www.qwak.com/post/what-does-it-take-to-deploy-ml-models-in-production
+	- https://www.projectpro.io/article/machine-learning-model-deployment/872
+	- https://aws.amazon.com/what-is/mlops/
+	- https://ml-ops.org/
+	- https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning
+	- https://www.youtube.com/watch?app=desktop&v=rgr_aCg-338
+	- https://www.youtube.com/watch?v=Gs15V79cauo
+	- https://www.youtube.com/watch?v=vA0C0k72-b4
+
+ - data preprocessing -> model training -> model testing
+					<- 
+					-> model packaging -> model testing -> model deployment
+- ML model deployment is just as important as ML model development.  -> pentru ca daca nu il si folosim degeaba am antrenat acel model
+
+model.save("trained_model") in tensorflow
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+}, "trained_model.pth") in torch
+
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+model.save_pretrained("model_directory")
+tokenizer.save_pretrained("model_directory") pentru cele care folosesc transformers
+
+Cred ca pentru doar un proiect de licenta putem face totul pe hpc unde sa il antrenam si apoi sa il folosim tot acolo, luandu-l din director. Trebuie ca in director sa avem aceste fisiere: 
+	- config.json
+	- pytorch_model.bin/tf_model.h5
+	- tokenizer_config.json
+	- vocab.txt/tokenizer.json
+	- special_tokens_map.json
+Si il vom folosi cu cereri api din fastapi(schimbat de la flask) direct din director.
+Daca vrem sa il folosim si in alte locuri nu doar pe HPC, va trebuie sa folosim docker pentru portabilitate si ajuta la pastrarea dependentelor de pe un pc pe altul. Cred ca cel mai bine este sa il punem in docker direct si apoi sa il folosim de oriunde dupa ce terminam de antrenat modelul.
+
+
+>>>>>>> dbab91eacac44fef15f6b5bb7f712bd5254f5d10
