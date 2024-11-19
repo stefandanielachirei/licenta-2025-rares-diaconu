@@ -1,3 +1,6 @@
-Flask
-Flask_sqlalchemy
+fastapi
+uvicorn
+sqlalchemy
 psycopg2
+pydantic[email]
+requests

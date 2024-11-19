@@ -8,23 +8,23 @@ import { DataService } from './data.service';
 })
 export class AppComponent {
   title = 'goodreads';
-  flaskText: string = '';
+  fastAPIText: string = '';
 
   constructor(private dataService: DataService) {}
 
   getText(){
-    this.dataService.getTextFromFlask().subscribe(
+    this.dataService.getTextFromFastAPI().subscribe(
       (response) => {
         if(response.text){
-          this.flaskText = response.text;
+          this.fastAPIText = response.text;
         }
         else{
-          this.flaskText = 'No text available';
+          this.fastAPIText = 'No text available';
         }
       },
       (error) => {
         console.error('Error fetching text from Flask API', error);
-        this.flaskText = 'Error fetching text!';
+        this.fastAPIText = 'Error fetching text!';
       }
     );
   }

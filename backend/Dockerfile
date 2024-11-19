@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Expunem portul 5000
-EXPOSE 5000
+EXPOSE 8000
 
 # Comanda care rulează aplicația Flask
-CMD ["python", "app.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

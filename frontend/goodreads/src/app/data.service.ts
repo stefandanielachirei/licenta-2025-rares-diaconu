@@ -7,10 +7,10 @@ import { HttpClient } from '@angular/common/http';
 })
 export class DataService {
 
-  private apiUrl = 'http://localhost:5000/api/text';
+  private apiUrl = 'http://localhost:8000/api/text';
   constructor(private http: HttpClient) { }
 
-  getTextFromFlask(): Observable<any> {
+  getTextFromFastAPI(): Observable<any> {
     return this.http.get<any>(this.apiUrl);
   }
 }
