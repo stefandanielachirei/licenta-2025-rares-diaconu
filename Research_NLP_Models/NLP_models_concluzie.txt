@@ -139,3 +139,7 @@ Daca vrem sa il folosim si in alte locuri nu doar pe HPC, va trebuie sa folosim 
 care este limita de input token la Llama-3.1-8B-Instruct(2048) si la Qwen2.5-1.5B-Instruct de gasit si daca este mai mic, sa schimbam si aici si in raport
 
 Am analizat limitele de token-uri de intrare de la fiecare model din top de pe hugging face de la text generation si am realizat ca l-am ales pe cel mai bun de prima data. Qwen2.5-1.5B-Instruct are suport pentru texte foarte lungi de pana la 32768 tokeni ceea ce il face ideal pentru task-ul de sumarizare pe dataset-ul booksum. Vom ramane cu acesta si il vom face sa mearga cumva.
+
+
+Ca dataset, nu vom mai folosi booksum pentru ca este destul de mic si destul de greu de incarcat. Vom folosi cu functia load_dataset din datasets dataset = load_dataset("cnn_dailymail", "3.0.0")
+si vom antrena cat de multe epoci se poate. Programul ruleaza desi destul de greu si am reusit sa antrenez o epoca. Am modificat si in raport unde am scris de dataset-ul de la booksum si am scris de cnn_dailymail 3.0.0
