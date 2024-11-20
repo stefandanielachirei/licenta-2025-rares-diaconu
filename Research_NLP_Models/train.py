@@ -1,41 +1,29 @@
-import tensorflow as tf
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+
 import torch
 from transformers import Trainer, TrainingArguments
 from datasets import load_dataset
-from transformers import Qwen2Tokenizer
-from transformers import AutoModelForCausalLM
+from transformers import Qwen2Tokenizer, AutoModelForCausalLM
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        tf.config.experimental.set_visible_devices(gpus[2], 'GPU')
-        tf.config.experimental.set_memory_growth(gpus[2], True)
-        print("TensorFlow configurat pentru a folosi GPU 2")
-    except RuntimeError as e:
-        print("Eroare la configurarea TensorFlow pentru GPU:", e)
-
-
-if torch.cuda.is_available():
-    device = torch.device("cuda:2")
-    print("Torch configurat pentru a folosi GPU 2")
-else:
-    device = torch.device("cpu")
-    print("Torch configurat să folosească CPU")
+torch.cuda.set_device(0)  # GPU 2 now maps to index 0 due to CUDA_VISIBLE_DEVICES
 
 # Load model and tokenizer
 model_name = "Qwen/Qwen2.5-1.5B-Instruct"
 tokenizer = Qwen2Tokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
+model.gradient_checkpointing_enable()
 
 # Load and preprocess dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 def preprocess(example):
-    inputs = tokenizer(example["article"], max_length=32768, truncation=True, padding="max_length")
+    inputs = tokenizer(example["article"], max_length=1024, truncation=True, padding="max_length")
     labels = tokenizer(example["highlights"], max_length=1024, truncation=True, padding="max_length")
     inputs["labels"] = labels["input_ids"]
     return inputs
 
-tokenized_dataset = dataset.map(preprocess, batched=True)
+tokenized_dataset = dataset.map(preprocess, batched=True).with_format("torch")
 
 # Training arguments
 training_args = TrainingArguments(
@@ -43,11 +31,13 @@ training_args = TrainingArguments(
     evaluation_strategy="epoch",
     save_strategy="epoch",
     learning_rate=2e-5,
-    per_device_train_batch_size=2,
+    gradient_accumulation_steps=4,
+    per_device_train_batch_size=1,
     num_train_epochs=1,
     weight_decay=0.01,
     push_to_hub=False,
     fp16=True,
+    dataloader_pin_memory=True
 )
 
 # Trainer
@@ -61,4 +51,3 @@ trainer = Trainer(
 
 # Train the model
 trainer.train()
-
