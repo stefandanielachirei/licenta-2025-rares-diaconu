@@ -1,0 +1,2 @@
+Hello world. This is a test dataset. Fine-tune GPT-2 for text generation.
+Another example line to ensure enough data for training.
