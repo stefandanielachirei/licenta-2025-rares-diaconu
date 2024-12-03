@@ -1,68 +1,76 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq
+from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from accelerate import Accelerator
+from tqdm import tqdm
 import evaluate
 
-# 1. Load model and tokenizer
-model_name = "t5-small"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# 1. Set device to use a single GPU
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
-# 2. Load dataset
+# 2. Load model and tokenizer with 4-bit quantization
+model_name = "meta-llama/Llama-3.2-1B"  # Replace with actual model name
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+
+# 3. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-# 3. Preprocessing
+# 4. Preprocessing
 def preprocess(example):
     inputs = tokenizer(
-        example["article"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
+        example["article"], max_length=1024, truncation=True, padding="max_length", return_tensors="pt"
     )
     labels = tokenizer(
-        example["highlights"], max_length=150, truncation=True, padding="max_length", return_tensors="pt"
+        example["highlights"], max_length=1024, truncation=True, padding="max_length", return_tensors="pt"
     )
     inputs["labels"] = labels["input_ids"]
     return {k: v.squeeze() for k, v in inputs.items()}
 
 tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset["train"].column_names)
 
-# 4. DataLoader and DataCollator
+# 5. DataLoader and DataCollator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=4, shuffle=True, collate_fn=data_collator)
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=4, collate_fn=data_collator)
 
-# 5. Initialize Accelerator
-accelerator = Accelerator()
-model, train_dataloader, eval_dataloader = accelerator.prepare(model, train_dataloader, eval_dataloader)
-
 # 6. Optimizer
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
-# 7. Early Stopping Configuration
+# 7. Metric for evaluation
+rouge = evaluate.load("rouge")
+
+# 8. Early Stopping Configuration
 patience = 3  # Number of epochs to wait before stopping
 best_val_loss = float('inf')
 early_stop_counter = 0
 
-# Metric for evaluation
-rouge = evaluate.load("rouge")
-
-# 8. Training Loop
+# 9. Training Loop
 num_epochs = 10  # Maximum number of epochs
 for epoch in range(num_epochs):
+    print(f"Epoch {epoch + 1}/{num_epochs}")
+
     # Training
     model.train()
     train_loss = 0
-    for batch in train_dataloader:
+    train_progress = tqdm(train_dataloader, desc="Training", leave=False)
+    for batch in train_progress:
+        batch = {k: v.to(device) for k, v in batch.items()}  # Move data to GPU
         optimizer.zero_grad()
         outputs = model(**batch)
         loss = outputs.loss
         train_loss += loss.item()
-        accelerator.backward(loss)
+        loss.backward()
         optimizer.step()
+
+        train_progress.set_postfix({"loss": loss.item()})
     
-    # Average training loss for the epoch
     train_loss /= len(train_dataloader)
     print(f"Epoch {epoch + 1}, Training Loss: {train_loss}")
 
@@ -71,7 +79,9 @@ for epoch in range(num_epochs):
     val_loss = 0
     all_predictions = []
     all_references = []
-    for batch in eval_dataloader:
+    val_progress = tqdm(eval_dataloader, desc="Validation", leave=False)
+    for batch in val_progress:
+        batch = {k: v.to(device) for k, v in batch.items()}  # Move data to GPU
         with torch.no_grad():
             outputs = model(**batch)
             val_loss += outputs.loss.item()
@@ -83,8 +93,9 @@ for epoch in range(num_epochs):
             references = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
             all_predictions.extend(predictions)
             all_references.extend(references)
+
+            val_progress.set_postfix({"val_loss": outputs.loss.item()})
     
-    # Average validation loss for the epoch
     val_loss /= len(eval_dataloader)
     print(f"Epoch {epoch + 1}, Validation Loss: {val_loss}")
 
@@ -105,7 +116,7 @@ for epoch in range(num_epochs):
             print(f"No improvement for {patience} epochs. Stopping early.")
             break
 
-# Final save
-output_dir = "./t5_final_model"
+# 10. Final save
+output_dir = "./llama_final_model"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
