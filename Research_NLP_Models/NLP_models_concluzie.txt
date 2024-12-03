@@ -144,3 +144,9 @@ Am analizat limitele de token-uri de intrare de la fiecare model din top de pe h
 Ca dataset, nu vom mai folosi booksum pentru ca este destul de mic si destul de greu de incarcat. Vom folosi cu functia load_dataset din datasets dataset = load_dataset("cnn_dailymail", "3.0.0")
 si vom antrena cat de multe epoci se poate. Programul ruleaza desi destul de greu si primesc eroarea asta dupa ce ruleaza cam 1h torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 594.00 MiB (GPU 0; 39.70 GiB total capacity; 15.78 GiB already allocated; 35.19 MiB free; 16.91 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
   0%|          | 0/71778 [00:01<?, ?it/s] si nu prea stiu cum sa o rezolv, am micsorat nr de input tokens si alte cateva solutii si nu reusesc. Am modificat si in raport unde am scris de dataset-ul de la booksum si am scris de cnn_dailymail 3.0.0
+
+https://www.datacamp.com/tutorial/loss-function-in-machine-learning
+https://blog.dailydoseofds.com/p/an-algorithm-wise-summary-of-loss
+https://medium.com/@sthanikamsanthosh1994/understanding-bleu-and-rouge-score-for-nlp-evaluation-1ab334ecadcb
+https://cyborgcodes.medium.com/what-is-early-stopping-in-deep-learning-eeb1e710a3cf
+https://developers.google.com/machine-learning/crash-course/overfitting/overfitting

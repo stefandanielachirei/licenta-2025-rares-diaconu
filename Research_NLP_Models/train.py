@@ -1,57 +1,111 @@
-import os
 import torch
-from transformers import Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq
 from datasets import load_dataset
-from transformers import Qwen2Tokenizer, AutoModelForCausalLM
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+from accelerate import Accelerator
+import evaluate
 
-# Setările pentru CUDA și backend
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
-torch.cuda.set_device(0)  # Asigură-te că selectezi corect dispozitivul CUDA
+# 1. Load model and tokenizer
+model_name = "t5-small"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# Inițializează procesarea distribuită cu Gloo
-if torch.cuda.device_count() > 1:
-    torch.distributed.init_process_group(backend="gloo")
-
-# Încarcă modelul și tokenizer-ul
-model_name = "Qwen/Qwen2.5-0.5B-Instruct"
-tokenizer = Qwen2Tokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
-model.gradient_checkpointing_enable()
-
-# Încarcă și preprocesează dataset-ul
+# 2. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
+
+# 3. Preprocessing
 def preprocess(example):
-    inputs = tokenizer(example["article"], max_length=1024, truncation=True, padding="max_length")
-    labels = tokenizer(example["highlights"], max_length=1024, truncation=True, padding="max_length")
+    inputs = tokenizer(
+        example["article"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
+    )
+    labels = tokenizer(
+        example["highlights"], max_length=150, truncation=True, padding="max_length", return_tensors="pt"
+    )
     inputs["labels"] = labels["input_ids"]
-    return inputs
+    return {k: v.squeeze() for k, v in inputs.items()}
 
-tokenized_dataset = dataset.map(preprocess, batched=True).with_format("torch")
+tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset["train"].column_names)
 
-# Configurații pentru antrenament
-training_args = TrainingArguments(
-    output_dir="./results",
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    learning_rate=2e-5,
-    gradient_accumulation_steps=4,
-    per_device_train_batch_size=1,
-    num_train_epochs=1,
-    weight_decay=0.01,
-    push_to_hub=False,
-    fp16=True,
-    dataloader_pin_memory=True,
-    ddp_backend="gloo"  # Setăm backend-ul distribuit Gloo
-)
+# 4. DataLoader and DataCollator
+data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
-# Creează Trainer-ul
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized_dataset["train"],
-    eval_dataset=tokenized_dataset["validation"],
-    tokenizer=tokenizer,
-)
+train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=4, shuffle=True, collate_fn=data_collator)
+eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=4, collate_fn=data_collator)
 
-# Pornește antrenamentul
-trainer.train()
+# 5. Initialize Accelerator
+accelerator = Accelerator()
+model, train_dataloader, eval_dataloader = accelerator.prepare(model, train_dataloader, eval_dataloader)
+
+# 6. Optimizer
+optimizer = AdamW(model.parameters(), lr=2e-5)
+
+# 7. Early Stopping Configuration
+patience = 3  # Number of epochs to wait before stopping
+best_val_loss = float('inf')
+early_stop_counter = 0
+
+# Metric for evaluation
+rouge = evaluate.load("rouge")
+
+# 8. Training Loop
+num_epochs = 10  # Maximum number of epochs
+for epoch in range(num_epochs):
+    # Training
+    model.train()
+    train_loss = 0
+    for batch in train_dataloader:
+        optimizer.zero_grad()
+        outputs = model(**batch)
+        loss = outputs.loss
+        train_loss += loss.item()
+        accelerator.backward(loss)
+        optimizer.step()
+    
+    # Average training loss for the epoch
+    train_loss /= len(train_dataloader)
+    print(f"Epoch {epoch + 1}, Training Loss: {train_loss}")
+
+    # Validation
+    model.eval()
+    val_loss = 0
+    all_predictions = []
+    all_references = []
+    for batch in eval_dataloader:
+        with torch.no_grad():
+            outputs = model(**batch)
+            val_loss += outputs.loss.item()
+            # Generate summaries and collect for metric evaluation
+            generated = model.generate(
+                input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
+            )
+            predictions = tokenizer.batch_decode(generated, skip_special_tokens=True)
+            references = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+            all_predictions.extend(predictions)
+            all_references.extend(references)
+    
+    # Average validation loss for the epoch
+    val_loss /= len(eval_dataloader)
+    print(f"Epoch {epoch + 1}, Validation Loss: {val_loss}")
+
+    # Compute ROUGE score
+    rouge_score = rouge.compute(predictions=all_predictions, references=all_references)
+    print(f"Epoch {epoch + 1}, ROUGE Score: {rouge_score}")
+
+    # Check for early stopping
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        early_stop_counter = 0
+        # Save the best model
+        model.save_pretrained("./best_model")
+        tokenizer.save_pretrained("./best_model")
+    else:
+        early_stop_counter += 1
+        if early_stop_counter >= patience:
+            print(f"No improvement for {patience} epochs. Stopping early.")
+            break
+
+# Final save
+output_dir = "./t5_final_model"
+model.save_pretrained(output_dir)
+tokenizer.save_pretrained(output_dir)
