@@ -7,7 +7,8 @@ from tqdm import tqdm
 import evaluate
 
 # 2. Set device to use a single GPU
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
@@ -16,14 +17,22 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
+tokenizer.padding_side = "left"
+
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     quantization_config={
         "load_in_4bit": True,
         "bnb_4bit_quant_type": "nf4",
-        "bnb_4bit_use_double_quant": True,
-    } 
-).to(device)
+        "bnb_4bit_use_double_quant": False,
+        "bnb_4bit_compute_dtype": torch.float16
+    },
+    low_cpu_mem_usage=True
+)
+
+print(f"Dropout rate in the model: {model.config.hidden_dropout_prob if hasattr(model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
+
+model = model.to(device)
 
 # 4. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
@@ -40,6 +49,9 @@ def preprocess(example):
         example["highlights"], max_length=1024, truncation=True, padding="max_length", return_tensors="pt"
     )
     inputs["labels"] = labels["input_ids"]
+    if torch.all(inputs["input_ids"] == tokenizer.pad_token_id) or torch.all(labels["input_ids"] == tokenizer.pad_token_id):
+        print(f"Skipped invalid example: {example}")
+        return None
     return {k: v.squeeze() for k, v in inputs.items()}
 
 tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset["train"].column_names)
@@ -51,7 +63,7 @@ train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=4, shuffle=
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=4, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=2e-5)
+optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -74,8 +86,12 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         outputs = model(**batch)
         loss = outputs.loss
+        if torch.isnan(loss) or torch.isinf(loss):
+            print("Invalid loss detected, skipping batch.")
+            continue
         train_loss += loss.item()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
         train_progress.set_postfix({"loss": loss.item()})
@@ -95,7 +111,12 @@ for epoch in range(num_epochs):
             val_loss += outputs.loss.item()
             # Generate summaries and collect for metric evaluation
             generated = model.generate(
-                input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                max_new_tokens=150,  # Specify how many tokens to generate
+                temperature=0.7,
+                top_k=50,
+                top_p=0.9
             )
             predictions = tokenizer.batch_decode(generated, skip_special_tokens=True)
             references = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
