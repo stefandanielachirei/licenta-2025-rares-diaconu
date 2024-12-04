@@ -150,3 +150,5 @@ https://blog.dailydoseofds.com/p/an-algorithm-wise-summary-of-loss
 https://medium.com/@sthanikamsanthosh1994/understanding-bleu-and-rouge-score-for-nlp-evaluation-1ab334ecadcb
 https://cyborgcodes.medium.com/what-is-early-stopping-in-deep-learning-eeb1e710a3cf
 https://developers.google.com/machine-learning/crash-course/overfitting/overfitting
+https://huggingface.co/meta-llama/Llama-3.2-1B
+https://www.datacamp.com/blog/classification-machine-learning
