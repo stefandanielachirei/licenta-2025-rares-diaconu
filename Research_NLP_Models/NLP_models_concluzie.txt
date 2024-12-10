@@ -153,6 +153,30 @@ https://developers.google.com/machine-learning/crash-course/overfitting/overfitt
 https://huggingface.co/meta-llama/Llama-3.2-1B
 https://www.datacamp.com/blog/classification-machine-learning
 https://www.ibm.com/topics/natural-language-processing
-https://colab.research.google.com/github/tensorflow/text/blob/master/docs/tutorials/word2vec.ipynb
-https://github.com/meta-llama/llama/issues/380
-https://huggingface.co/blog/mlabonne/sft-llama3
+
+Astea sunt rezultatele de la antrenare fara LoRA
+
+Map: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 13368/13368 [00:34<00:00, 384.45 examples/s]
+Epoch 1/10
+Training:   0%|                                                                                                                                                                   | 0/12500 [00:00<?, ?it/s]C:\Users\Operator\.conda\envs\Machine_Learning_Licenta_AC\lib\site-packages\transformers\models\llama\modeling_llama.py:602: UserWarning: 1Torch was not compiled with flash attention. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\builder\windows\pytorch\aten\src\ATen\native\transformers\cuda\sdp_utils.cpp:555.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+Training:  50%|██████████████████████████████████████████████████████████████████████▏ 
+
+1, Training Loss: 10.334211371421814
+Validation:   0%|                                                                                                                                                                  | 0/3342 [00:00<?, ?it/s]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|                                                                                                                                         | 1/3342 [00:08<7:41:48,  8.29s/it, val_loss=7.71]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|                                                                                                                                         | 2/3342 [00:09<3:53:08,  4.19s/it, val_loss=7.46]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|                                                                                                                                         | 3/3342 [00:17<5:19:39,  5.74s/it, val_loss=7.71]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|▏                                                                                                                                        | 4/3342 [00:24<6:02:07,  6.51s/it, val_loss=7.36]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|▏                                                                                                                                        | 5/3342 [00:32<6:23:32,  6.90s/it, val_loss=7.36]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|▏                                                                                                                                        | 6/3342 [00:40<6:36:50,  7.14s/it, val_loss=7.35]Setting pad_token_id to eos_token_id:None for open-end generation.
+Validation:   0%|▎                                                                                                                                        | 7/3342 [00:47<6:46:10,  7.31s/it, val_loss=8.88]Setting pad_token_id to eos_token_id:None for open-end generation.
+
+Validation:  21%|████████████████████████████▍                                                                                                        | 716/3342 [1:28:57<5:32:46,  7.60s/it, val_loss=13.3]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+Validation:  21%|████████████████████████████▌                                                                                                        | 717/3342 [1:29:05<5:32:40,  7.60s/it, val_loss=13.7]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+Validation:  21%|████████████████████████████▌                                                                                                        | 718/3342 [1:29:12<5:32:29,  7.60s/it, val_loss=12.7]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+Validation:  22%|████████████████████████████▌                                                                                                        | 719/3342 [1:29:20<5:33:37,  7.63s/it, val_loss=11.4]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+Validation:  22%|████████████████████████████▋                                                                                                        | 720/3342 [1:29:28<5:34:10,  7.65s/it, val_loss=13.7]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+
+Astea sunt rezultatele de la antrenare cu LoRA
+

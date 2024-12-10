@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
 import evaluate
+from peft import LoraConfig, get_peft_model
 
 # 2. Set device to use a single GPU
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -33,6 +34,17 @@ model = AutoModelForCausalLM.from_pretrained(
 model = model.bfloat16()
 model.resize_token_embeddings(len(tokenizer))
 print(f"Dropout rate in the model: {model.config.hidden_dropout_prob if hasattr(model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
+
+lora_config = LoraConfig(
+    r=16,  # Dimensiunea rank-ului (valoare tipică: 8-16)
+    lora_alpha=32,  # Factor de scalare
+    target_modules=["q_proj", "v_proj"],  # Modulele vizate (de exemplu, proiecțiile atenției)
+    lora_dropout=0.1,  # Dropout pentru regularizare
+    bias="none"  # Nu adaptăm biasele
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
 
 model = model.to(device)
 
