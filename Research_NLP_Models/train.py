@@ -15,7 +15,7 @@ model_name = "meta-llama/Llama-3.2-1B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
 tokenizer.padding_side = "left"
 
@@ -25,11 +25,13 @@ model = AutoModelForCausalLM.from_pretrained(
         "load_in_4bit": True,
         "bnb_4bit_quant_type": "nf4",
         "bnb_4bit_use_double_quant": False,
-        "bnb_4bit_compute_dtype": torch.float16
+        "bnb_4bit_compute_dtype": torch.bfloat16
     },
     low_cpu_mem_usage=True
 )
 
+model = model.bfloat16()
+model.resize_token_embeddings(len(tokenizer))
 print(f"Dropout rate in the model: {model.config.hidden_dropout_prob if hasattr(model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
 
 model = model.to(device)
@@ -116,7 +118,8 @@ for epoch in range(num_epochs):
                 max_new_tokens=150,  # Specify how many tokens to generate
                 temperature=0.7,
                 top_k=50,
-                top_p=0.9
+                top_p=0.9,
+                pad_token_id=tokenizer.pad_token_id
             )
             predictions = tokenizer.batch_decode(generated, skip_special_tokens=True)
             references = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)

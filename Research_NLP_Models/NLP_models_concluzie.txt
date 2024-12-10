@@ -153,3 +153,6 @@ https://developers.google.com/machine-learning/crash-course/overfitting/overfitt
 https://huggingface.co/meta-llama/Llama-3.2-1B
 https://www.datacamp.com/blog/classification-machine-learning
 https://www.ibm.com/topics/natural-language-processing
+https://colab.research.google.com/github/tensorflow/text/blob/master/docs/tutorials/word2vec.ipynb
+https://github.com/meta-llama/llama/issues/380
+https://huggingface.co/blog/mlabonne/sft-llama3
