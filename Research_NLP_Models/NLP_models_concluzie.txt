@@ -153,6 +153,10 @@ https://developers.google.com/machine-learning/crash-course/overfitting/overfitt
 https://huggingface.co/meta-llama/Llama-3.2-1B
 https://www.datacamp.com/blog/classification-machine-learning
 https://www.ibm.com/topics/natural-language-processing
+https://neptune.ai/blog/tips-to-train-nlp-models
+https://www.linkedin.com/advice/0/how-do-you-train-natural-language-processing
+https://www.youtube.com/watch?v=pK8u4QfdLx0
+https://chatgpt.com/share/6758add8-bc38-8009-aa0c-6434f3ac367e
 
 Astea sunt rezultatele de la antrenare fara LoRA
 
@@ -179,4 +183,14 @@ Validation:  22%|█████████████████████
 Validation:  22%|████████████████████████████▋                                                                                                        | 720/3342 [1:29:28<5:34:10,  7.65s/it, val_loss=13.7]Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
 
 Astea sunt rezultatele de la antrenare cu LoRA
+
+trainable params: 1,703,936 || all params: 1,237,520,384 || trainable%: 0.1377
+Map: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 11490/11490 [00:27<00:00, 424.12 examples/s]
+Epoch 1/10
+Training:   0%|                                                                                                                                                                   | 0/12500 [00:00<?, ?it/s]C:\Users\Operator\.conda\envs\Machine_Learning_Licenta_AC\lib\site-packages\transformers\models\llama\modeling_llama.py:602: UserWarning: 1Torch was not compiled with flash attention. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\builder\windows\pytorch\aten\src\ATen\native\transformers\cuda\sdp_utils.cpp:555.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+Epoch 1, Training Loss: 11.777944088668823
+Epoch 1, Validation Loss: 11.646943058673669
+Epoch 1, ROUGE Score: {'rouge1': 0.14759450271936947, 'rouge2': 0.08367271742006074, 'rougeL': 0.10716193805811874, 'rougeLsum': 0.13035568959330818}                
+
 

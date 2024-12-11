@@ -73,8 +73,8 @@ tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset
 # 6. DataLoader and DataCollator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
-train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=4, shuffle=True, collate_fn=data_collator)
-eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=4, collate_fn=data_collator)
+train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=True, collate_fn=data_collator)
+eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
 
 # 7. Optimizer
 optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)
