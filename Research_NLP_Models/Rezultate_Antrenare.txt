@@ -1,0 +1,8 @@
+11.12.2024
+
+trainable params: 1,703,936 || all params: 1,237,520,384 || trainable%: 0.1377
+
+Epoch 1/10
+Epoch 1, Training Loss: 11.878243476257325
+Epoch 1, Validation Loss: 11.645281525160437
+Epoch 1, ROUGE Score: {'rouge1': 0.14520079122021307, 'rouge2': 0.08233176138113346, 'rougeL': 0.10550451512918221, 'rougeLsum': 0.12846264708468003}
