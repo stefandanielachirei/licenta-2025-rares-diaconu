@@ -1,11 +1,14 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq
+import json
+from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, Adafactor, LlamaConfig
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
+
 import evaluate
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, PeftModel
+from torch.utils.tensorboard import SummaryWriter
 
 # 2. Set device to use a single GPU
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -13,37 +16,30 @@ torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
+model_dir = "./llama_final_model"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+base_model = AutoModelForCausalLM.from_pretrained(model_name)
+
+writer = SummaryWriter(log_dir="./tensorboard_logs_second_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
-tokenizer.padding_side = "left"
+base_model.resize_token_embeddings(len(tokenizer))
 
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    quantization_config={
-        "load_in_4bit": True,
-        "bnb_4bit_quant_type": "nf4",
-        "bnb_4bit_use_double_quant": False,
-        "bnb_4bit_compute_dtype": torch.bfloat16
-    },
-    low_cpu_mem_usage=True
-)
+adapter_model = PeftModel.from_pretrained(base_model, model_dir)
 
-model = model.bfloat16()
-model.resize_token_embeddings(len(tokenizer))
-print(f"Dropout rate in the model: {model.config.hidden_dropout_prob if hasattr(model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
+print(f"Dropout rate in the model: {adapter_model.config.hidden_dropout_prob if hasattr(adapter_model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
 
 lora_config = LoraConfig(
     r=16,  # Dimensiunea rank-ului (valoare tipică: 8-16)
     lora_alpha=32,  # Factor de scalare
     target_modules=["q_proj", "v_proj"],  # Modulele vizate (de exemplu, proiecțiile atenției)
-    lora_dropout=0.1,  # Dropout pentru regularizare
+    lora_dropout=0.2,  # Dropout pentru regularizare
     bias="none"  # Nu adaptăm biasele
 )
 
-model = get_peft_model(model, lora_config)
+model = get_peft_model(adapter_model, lora_config)
 model.print_trainable_parameters()
 
 model = model.to(device)
@@ -51,16 +47,16 @@ model = model.to(device)
 # 4. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-train_subset_size = 50000
+train_subset_size = 100000
 dataset["train"] = dataset["train"].select(range(train_subset_size))
 
 # 5. Preprocessing
 def preprocess(example):
     inputs = tokenizer(
-        example["article"], max_length=1024, truncation=True, padding="max_length", return_tensors="pt"
+        example["article"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
     )
     labels = tokenizer(
-        example["highlights"], max_length=1024, truncation=True, padding="max_length", return_tensors="pt"
+        example["highlights"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
     )
     inputs["labels"] = labels["input_ids"]
     if torch.all(inputs["input_ids"] == tokenizer.pad_token_id) or torch.all(labels["input_ids"] == tokenizer.pad_token_id):
@@ -77,7 +73,7 @@ train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)
+optimizer = AdamW(model.parameters(), lr=5e-6, weight_decay=0.01)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -112,6 +108,7 @@ for epoch in range(num_epochs):
     
     train_loss /= len(train_dataloader)
     print(f"Epoch {epoch + 1}, Training Loss: {train_loss}")
+    writer.add_scalar("Loss/Training", train_loss, epoch)
 
     model.eval()
     val_loss = 0
@@ -142,25 +139,39 @@ for epoch in range(num_epochs):
     
     val_loss /= len(eval_dataloader)
     print(f"Epoch {epoch + 1}, Validation Loss: {val_loss}")
+    writer.add_scalar("Loss/Validation", val_loss, epoch)
 
     # Compute ROUGE score
     rouge_score = rouge.compute(predictions=all_predictions, references=all_references)
     print(f"Epoch {epoch + 1}, ROUGE Score: {rouge_score}")
+
+    writer.add_scalar("ROUGE/ROUGE-1", rouge_score["rouge1"], epoch)
+    writer.add_scalar("ROUGE/ROUGE-2", rouge_score["rouge2"], epoch)
+    writer.add_scalar("ROUGE/ROUGE-L", rouge_score["rougeL"], epoch)
+    writer.add_scalar("ROUGE/ROUGE-Lsum", rouge_score["rougeLsum"], epoch)
 
     # Check for early stopping
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         early_stop_counter = 0
         
-        model.save_pretrained("./best_model")
-        tokenizer.save_pretrained("./best_model")
+        model.save_pretrained("./best_model_second_training")
+        tokenizer.save_pretrained("./best_model_second_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
             print(f"No improvement for {patience} epochs. Stopping early.")
             break
+        
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'best_val_loss': best_val_loss
+    }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model"
+output_dir = "./llama_final_model_second_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
+writer.close()
