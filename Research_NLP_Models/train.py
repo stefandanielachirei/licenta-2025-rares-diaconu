@@ -16,14 +16,15 @@ torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./llama_final_model"
+model_dir = "./best_model_second_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_second_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_third_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+tokenizer.padding_side = "left"
 
 base_model.resize_token_embeddings(len(tokenizer))
 
@@ -35,7 +36,7 @@ lora_config = LoraConfig(
     r=16,  # Dimensiunea rank-ului (valoare tipică: 8-16)
     lora_alpha=32,  # Factor de scalare
     target_modules=["q_proj", "v_proj"],  # Modulele vizate (de exemplu, proiecțiile atenției)
-    lora_dropout=0.2,  # Dropout pentru regularizare
+    lora_dropout=0.3,  # Dropout pentru regularizare
     bias="none"  # Nu adaptăm biasele
 )
 
@@ -47,8 +48,9 @@ model = model.to(device)
 # 4. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-train_subset_size = 100000
-dataset["train"] = dataset["train"].select(range(train_subset_size))
+start_idx = 100000
+end_idx = 200000
+dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing
 def preprocess(example):
@@ -69,11 +71,11 @@ tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset
 # 6. DataLoader and DataCollator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
-train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=True, collate_fn=data_collator)
-eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
+train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=16, shuffle=True, collate_fn=data_collator)
+eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=16, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=5e-6, weight_decay=0.01)
+optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.1)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -125,7 +127,8 @@ for epoch in range(num_epochs):
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
                 max_new_tokens=150,  # Specify how many tokens to generate
-                temperature=0.7,
+		num_beams=4,
+                temperature=0.5,
                 top_k=50,
                 top_p=0.9,
                 pad_token_id=tokenizer.pad_token_id
@@ -155,8 +158,8 @@ for epoch in range(num_epochs):
         best_val_loss = val_loss
         early_stop_counter = 0
         
-        model.save_pretrained("./best_model_second_training")
-        tokenizer.save_pretrained("./best_model_second_training")
+        model.save_pretrained("./best_model_third_training")
+        tokenizer.save_pretrained("./best_model_third_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -171,7 +174,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_second_training"
+output_dir = "./llama_final_model_third_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
