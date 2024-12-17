@@ -16,11 +16,11 @@ torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./best_model_second_training"
+model_dir = "./best_model_third_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_third_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_4_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -48,17 +48,17 @@ model = model.to(device)
 # 4. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-start_idx = 100000
-end_idx = 200000
+start_idx = 200000
+end_idx = 287000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing
 def preprocess(example):
     inputs = tokenizer(
-        example["article"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
+        example["article"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
     )
     labels = tokenizer(
-        example["highlights"], max_length=512, truncation=True, padding="max_length", return_tensors="pt"
+        example["highlights"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
     )
     inputs["labels"] = labels["input_ids"]
     if torch.all(inputs["input_ids"] == tokenizer.pad_token_id) or torch.all(labels["input_ids"] == tokenizer.pad_token_id):
@@ -71,11 +71,11 @@ tokenized_dataset = dataset.map(preprocess, batched=True, remove_columns=dataset
 # 6. DataLoader and DataCollator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
-train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=16, shuffle=True, collate_fn=data_collator)
-eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=16, collate_fn=data_collator)
+train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=True, collate_fn=data_collator)
+eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.1)
+optimizer = AdamW(model.parameters(), lr=2e-5, weight_decay=0.1)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -84,29 +84,36 @@ rouge = evaluate.load("rouge")
 patience = 3  # Number of epochs to wait before stopping
 best_val_loss = float('inf')
 early_stop_counter = 0
+gradient_accumulation_steps = 4
 
 # 10. Training Loop
-num_epochs = 10 
+num_epochs = 20 
 for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs}")
 
     model.train()
     train_loss = 0
+    optimizer.zero_grad()  # Inițializezi gradientul la începutul epocii
     train_progress = tqdm(train_dataloader, desc="Training", leave=False)
-    for batch in train_progress:
+    
+    for step, batch in enumerate(train_progress):
         batch = {k: v.to(device) for k, v in batch.items()}
-        optimizer.zero_grad()
         outputs = model(**batch)
-        loss = outputs.loss
+        loss = outputs.loss / gradient_accumulation_steps  # Împarte loss-ul
+        
         if torch.isnan(loss) or torch.isinf(loss):
             print("Invalid loss detected, skipping batch.")
             continue
-        train_loss += loss.item()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
-
-        train_progress.set_postfix({"loss": loss.item()})
+        
+        loss.backward()  # Backpropagation pentru acumularea gradientului
+        train_loss += loss.item() * gradient_accumulation_steps  # Re-scalează loss-ul pentru totalizare
+        
+        if (step + 1) % gradient_accumulation_steps == 0:  
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Clip gradient
+            optimizer.step()  # Actualizează parametrii
+            optimizer.zero_grad()  # Resetează gradientul
+        
+        train_progress.set_postfix({"loss": loss.item() * gradient_accumulation_steps})  # Log loss-ul real
     
     train_loss /= len(train_dataloader)
     print(f"Epoch {epoch + 1}, Training Loss: {train_loss}")
@@ -158,8 +165,8 @@ for epoch in range(num_epochs):
         best_val_loss = val_loss
         early_stop_counter = 0
         
-        model.save_pretrained("./best_model_third_training")
-        tokenizer.save_pretrained("./best_model_third_training")
+        model.save_pretrained("./best_model_4_training")
+        tokenizer.save_pretrained("./best_model_4_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -174,7 +181,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_third_training"
+output_dir = "./llama_final_model_4_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
