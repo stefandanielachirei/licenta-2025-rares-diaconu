@@ -16,11 +16,11 @@ torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./best_model_third_training"
+model_dir = "./best_model_4_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_4_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_5_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -48,8 +48,8 @@ model = model.to(device)
 # 4. Load dataset
 dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-start_idx = 200000
-end_idx = 287000
+start_idx = 0
+end_idx = 100000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing
@@ -75,7 +75,7 @@ train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=2e-5, weight_decay=0.1)
+optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.1)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -165,8 +165,8 @@ for epoch in range(num_epochs):
         best_val_loss = val_loss
         early_stop_counter = 0
         
-        model.save_pretrained("./best_model_4_training")
-        tokenizer.save_pretrained("./best_model_4_training")
+        model.save_pretrained("./best_model_5_training")
+        tokenizer.save_pretrained("./best_model_5_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -181,7 +181,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_4_training"
+output_dir = "./llama_final_model_5_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
