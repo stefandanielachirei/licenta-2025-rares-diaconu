@@ -1,6 +1,6 @@
 import torch
 import json
-from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, Adafactor, LlamaConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, get_linear_schedule_with_warmup
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -20,7 +20,7 @@ model_dir = "./best_model_4_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_5_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_6_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -46,19 +46,20 @@ model.print_trainable_parameters()
 model = model.to(device)
 
 # 4. Load dataset
-dataset = load_dataset("cnn_dailymail", "3.0.0")
+#dataset = load_dataset("cnn_dailymail", "3.0.0")
 
-start_idx = 0
-end_idx = 100000
-dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
+#start_idx = 0
+#end_idx = 100000
+#dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
+dataset = load_dataset("multi_news", trust_remote_code=True)
 
 # 5. Preprocessing
 def preprocess(example):
     inputs = tokenizer(
-        example["article"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
+        example["document"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
     )
     labels = tokenizer(
-        example["highlights"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
+        example["summary"], max_length=256, truncation=True, padding="max_length", return_tensors="pt"
     )
     inputs["labels"] = labels["input_ids"]
     if torch.all(inputs["input_ids"] == tokenizer.pad_token_id) or torch.all(labels["input_ids"] == tokenizer.pad_token_id):
@@ -75,10 +76,11 @@ train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=8, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.1)
+optimizer = AdamW(model.parameters(), lr=2e-5, weight_decay=0.1)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
+
 
 # 9. Early Stopping Configuration
 patience = 3  # Number of epochs to wait before stopping
@@ -88,6 +90,14 @@ gradient_accumulation_steps = 4
 
 # 10. Training Loop
 num_epochs = 20 
+
+total_steps = len(train_dataloader) * num_epochs // gradient_accumulation_steps
+scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=0.1 * total_steps,  # 10% warmup steps
+    num_training_steps=total_steps
+)
+
 for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs}")
 
@@ -111,6 +121,7 @@ for epoch in range(num_epochs):
         if (step + 1) % gradient_accumulation_steps == 0:  
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Clip gradient
             optimizer.step()  # Actualizează parametrii
+            scheduler.step()
             optimizer.zero_grad()  # Resetează gradientul
         
         train_progress.set_postfix({"loss": loss.item() * gradient_accumulation_steps})  # Log loss-ul real
@@ -165,8 +176,8 @@ for epoch in range(num_epochs):
         best_val_loss = val_loss
         early_stop_counter = 0
         
-        model.save_pretrained("./best_model_5_training")
-        tokenizer.save_pretrained("./best_model_5_training")
+        model.save_pretrained("./best_model_6_training")
+        tokenizer.save_pretrained("./best_model_6_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -181,7 +192,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_5_training"
+output_dir = "./llama_final_model_6_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
