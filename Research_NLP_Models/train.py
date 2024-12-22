@@ -15,11 +15,11 @@ torch.cuda.set_device(device)
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./best_model_mediasum_1_training"
+model_dir = "./best_model_mediasum_2_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_mediasum_2_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_mediasum_dailymail_1_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -46,15 +46,15 @@ model.print_trainable_parameters()
 model = model.to(device)
 
 # 4. Load dataset
-dataset = load_dataset("ccdv/mediasum", trust_remote_code=True)
+dataset = load_dataset('cnn_dailymail', '3.0.0') 
 
-start_idx = 100000
+start_idx = 0
 end_idx = 200000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing actualizat cu prompt explicit
 def preprocess(example):
-    prompt = f"Sumarizeaza următorul text în maxim 3 propoziții importante:\n{example['document']}\n\nSumar concis:"
+    prompt = f"Sumarizeaza următorul text în maxim 3 propoziții importante:\n{example['article']}\n\nSumar concis:"
     inputs = tokenizer(
         prompt, 
         max_length=512,  # Mărit la 512
@@ -63,7 +63,7 @@ def preprocess(example):
         return_tensors="pt"
     )
     labels = tokenizer(
-        example["summary"], 
+        example["highlights"], 
         max_length=512,  # Mărit la 256 pentru summary
         truncation=True, 
         padding="max_length", 
@@ -191,8 +191,8 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         early_stop_counter = 0
-        model.save_pretrained("./best_model_mediasum_2_training")
-        tokenizer.save_pretrained("./best_model_mediasum_2_training")
+        model.save_pretrained("./best_model_mediasum_dailymail_1_training")
+        tokenizer.save_pretrained("./best_model_mediasum_dailymail_1_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -207,7 +207,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_mediasum_2_training"
+output_dir = "./llama_final_model_mediasum_dailymail_1_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
