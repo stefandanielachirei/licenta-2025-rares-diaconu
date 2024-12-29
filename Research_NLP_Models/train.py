@@ -1,5 +1,5 @@
 import torch
-import json
+import os
 from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, get_linear_schedule_with_warmup
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -13,13 +13,18 @@ from torch.utils.tensorboard import SummaryWriter
 device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 torch.cuda.set_device(device)
 
+cache_dir = 'K:/Work/Rares/cache2'
+if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+os.environ['HF_DATASETS_CACHE'] = cache_dir
+
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./best_model_mediasum_2_training"
+model_dir = "./best_model_mediasum_dailymail_3_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_mediasum_dailymail_1_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_big_patent_1_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -36,7 +41,7 @@ lora_config = LoraConfig(
     r=32,
     lora_alpha=32,
     target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Adăugat k_proj și o_proj
-    lora_dropout=0.4,
+    lora_dropout=0.3,
     bias="none"
 )
 
@@ -46,15 +51,15 @@ model.print_trainable_parameters()
 model = model.to(device)
 
 # 4. Load dataset
-dataset = load_dataset('cnn_dailymail', '3.0.0') 
+dataset = load_dataset("big_patent", trust_remote_code=True) 
 
 start_idx = 0
-end_idx = 200000
+end_idx = 300000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing actualizat cu prompt explicit
 def preprocess(example):
-    prompt = f"Sumarizeaza următorul text în maxim 3 propoziții importante:\n{example['article']}\n\nSumar concis:"
+    prompt = f"Summarize the following text in maximum 3 important sentences:\n{example['description']}\n\nConcise summary:"
     inputs = tokenizer(
         prompt, 
         max_length=512,  # Mărit la 512
@@ -63,7 +68,7 @@ def preprocess(example):
         return_tensors="pt"
     )
     labels = tokenizer(
-        example["highlights"], 
+        example["abstract"], 
         max_length=512,  # Mărit la 256 pentru summary
         truncation=True, 
         padding="max_length", 
@@ -84,7 +89,7 @@ train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=16, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=2e-5, weight_decay=0.1)
+optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.1)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -96,7 +101,7 @@ early_stop_counter = 0
 gradient_accumulation_steps = 2  # Redus la 2
 loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_smoothing=0.1)
 # 10. Training Loop
-num_epochs = 20
+num_epochs = 30
 
 total_steps = len(train_dataloader) * num_epochs // gradient_accumulation_steps
 scheduler = get_linear_schedule_with_warmup(
@@ -156,13 +161,13 @@ for epoch in range(num_epochs):
             generated = model.generate(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                max_new_tokens=128,  # Mărit la 256
+                max_new_tokens=150,  # Mărit la 256
                 num_beams=4,
-                temperature=0.5,
+                temperature=0.6,
                 top_k=50,
                 top_p=0.9,
-                repetition_penalty=1.2,  # Nou
-                length_penalty=0.8,  # Nou
+                repetition_penalty=1.3,  # Nou
+                length_penalty=1.0,  # Nou
                 no_repeat_ngram_size=3,  # Nou
                 pad_token_id=tokenizer.pad_token_id
             )
@@ -191,8 +196,8 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         early_stop_counter = 0
-        model.save_pretrained("./best_model_mediasum_dailymail_1_training")
-        tokenizer.save_pretrained("./best_model_mediasum_dailymail_1_training")
+        model.save_pretrained("./best_model_big_patent_1_training")
+        tokenizer.save_pretrained("./best_model_big_patent_1_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -207,7 +212,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_mediasum_dailymail_1_training"
+output_dir = "./llama_final_model_big_patent_1_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
