@@ -1,6 +1,6 @@
 import torch
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, get_linear_schedule_with_warmup
+from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, get_cosine_with_hard_restarts_schedule_with_warmup
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -10,7 +10,7 @@ from peft import LoraConfig, get_peft_model, PeftModel
 from torch.utils.tensorboard import SummaryWriter
 
 # 2. Set device to use a single GPU
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 torch.cuda.set_device(device)
 
 cache_dir = 'K:/Work/Rares/cache2'
@@ -20,11 +20,11 @@ os.environ['HF_DATASETS_CACHE'] = cache_dir
 
 # 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./best_model_mediasum_dailymail_3_training"
+model_dir = "./llama_final_model_big_patent_3_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_big_patent_1_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_big_patent_5_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -39,9 +39,9 @@ print(f"Dropout rate in the model: {adapter_model.config.hidden_dropout_prob if 
 # Configurație LoRA actualizată
 lora_config = LoraConfig(
     r=32,
-    lora_alpha=32,
+    lora_alpha=64,
     target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Adăugat k_proj și o_proj
-    lora_dropout=0.3,
+    lora_dropout=0.6,
     bias="none"
 )
 
@@ -53,8 +53,8 @@ model = model.to(device)
 # 4. Load dataset
 dataset = load_dataset("big_patent", trust_remote_code=True) 
 
-start_idx = 0
-end_idx = 300000
+start_idx = 600000
+end_idx = 700000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
 # 5. Preprocessing actualizat cu prompt explicit
@@ -62,14 +62,14 @@ def preprocess(example):
     prompt = f"Summarize the following text in maximum 3 important sentences:\n{example['description']}\n\nConcise summary:"
     inputs = tokenizer(
         prompt, 
-        max_length=512,  # Mărit la 512
+        max_length=256,
         truncation=True, 
         padding="max_length", 
         return_tensors="pt"
     )
     labels = tokenizer(
         example["abstract"], 
-        max_length=512,  # Mărit la 256 pentru summary
+        max_length=256,
         truncation=True, 
         padding="max_length", 
         return_tensors="pt"
@@ -86,10 +86,11 @@ tokenized_dataset = dataset.map(preprocess, remove_columns=dataset["train"].colu
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=True, collate_fn=data_collator)
+dataset["validation"] = dataset["validation"].select(range(0, 5000))
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=16, collate_fn=data_collator)
 
 # 7. Optimizer
-optimizer = AdamW(model.parameters(), lr=3e-5, weight_decay=0.1)
+optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.25)
 
 # 8. Metric for evaluation
 rouge = evaluate.load("rouge")
@@ -104,10 +105,11 @@ loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_s
 num_epochs = 30
 
 total_steps = len(train_dataloader) * num_epochs // gradient_accumulation_steps
-scheduler = get_linear_schedule_with_warmup(
+scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(
     optimizer,
     num_warmup_steps=0.1 * total_steps,
-    num_training_steps=total_steps
+    num_training_steps=total_steps,
+    num_cycles = 3
 )
 
 for epoch in range(num_epochs):
@@ -134,7 +136,7 @@ for epoch in range(num_epochs):
         train_loss += loss.item() * gradient_accumulation_steps
         
         if (step + 1) % gradient_accumulation_steps == 0:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
@@ -161,8 +163,8 @@ for epoch in range(num_epochs):
             generated = model.generate(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                max_new_tokens=150,  # Mărit la 256
-                num_beams=4,
+                max_new_tokens=100,
+                num_beams=3,
                 temperature=0.6,
                 top_k=50,
                 top_p=0.9,
@@ -196,8 +198,8 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         early_stop_counter = 0
-        model.save_pretrained("./best_model_big_patent_1_training")
-        tokenizer.save_pretrained("./best_model_big_patent_1_training")
+        model.save_pretrained("./best_model_big_patent_5_training")
+        tokenizer.save_pretrained("./best_model_big_patent_5_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -212,7 +214,7 @@ for epoch in range(num_epochs):
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
 # 11. Final save
-output_dir = "./llama_final_model_big_patent_1_training"
+output_dir = "./llama_final_model_big_patent_5_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
