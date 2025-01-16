@@ -9,7 +9,6 @@ import evaluate
 from peft import LoraConfig, get_peft_model, PeftModel
 from torch.utils.tensorboard import SummaryWriter
 
-# 2. Set device to use a single GPU
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 torch.cuda.set_device(device)
 
@@ -18,13 +17,12 @@ if not os.path.exists(cache_dir):
     os.makedirs(cache_dir)
 os.environ['HF_DATASETS_CACHE'] = cache_dir
 
-# 3. Load model and tokenizer with 4-bit quantization
 model_name = "meta-llama/Llama-3.2-1B"
-model_dir = "./llama_final_model_big_patent_3_training"
+model_dir = "./llama_final_model_big_patent_5_training"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 base_model = AutoModelForCausalLM.from_pretrained(model_name)
 
-writer = SummaryWriter(log_dir="./tensorboard_logs_big_patent_5_training")
+writer = SummaryWriter(log_dir="./tensorboard_logs_big_patent_7_training")
 
 if tokenizer.pad_token is None:
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
@@ -36,7 +34,6 @@ adapter_model = PeftModel.from_pretrained(base_model, model_dir)
 
 print(f"Dropout rate in the model: {adapter_model.config.hidden_dropout_prob if hasattr(adapter_model.config,'hidden_dropout_prob') else 'Not specified, likely default.'}")
 
-# Configurație LoRA actualizată
 lora_config = LoraConfig(
     r=32,
     lora_alpha=64,
@@ -50,14 +47,12 @@ model.print_trainable_parameters()
 
 model = model.to(device)
 
-# 4. Load dataset
 dataset = load_dataset("big_patent", trust_remote_code=True) 
 
-start_idx = 600000
-end_idx = 700000
+start_idx = 800000
+end_idx = 900000
 dataset["train"] = dataset["train"].select(range(start_idx, end_idx))
 
-# 5. Preprocessing actualizat cu prompt explicit
 def preprocess(example):
     prompt = f"Summarize the following text in maximum 3 important sentences:\n{example['description']}\n\nConcise summary:"
     inputs = tokenizer(
@@ -82,26 +77,23 @@ def preprocess(example):
 
 tokenized_dataset = dataset.map(preprocess, remove_columns=dataset["train"].column_names)
 
-# 6. DataLoader and DataCollator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=8, shuffle=True, collate_fn=data_collator)
 dataset["validation"] = dataset["validation"].select(range(0, 5000))
 eval_dataloader = DataLoader(tokenized_dataset["validation"], batch_size=16, collate_fn=data_collator)
 
-# 7. Optimizer
+# optimizer
 optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=0.25)
 
-# 8. Metric for evaluation
 rouge = evaluate.load("rouge")
 
-# 9. Early Stopping Configuration
+# early stopping configuration
 patience = 3
 best_val_loss = float('inf')
 early_stop_counter = 0
 gradient_accumulation_steps = 2  # Redus la 2
 loss_fn = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, label_smoothing=0.1)
-# 10. Training Loop
 num_epochs = 30
 
 total_steps = len(train_dataloader) * num_epochs // gradient_accumulation_steps
@@ -159,7 +151,6 @@ for epoch in range(num_epochs):
             outputs = model(**batch)
             val_loss += outputs.loss.item()
             
-            # Generate summaries cu parametri actualizați
             generated = model.generate(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
@@ -168,9 +159,9 @@ for epoch in range(num_epochs):
                 temperature=0.6,
                 top_k=50,
                 top_p=0.9,
-                repetition_penalty=1.3,  # Nou
-                length_penalty=1.0,  # Nou
-                no_repeat_ngram_size=3,  # Nou
+                repetition_penalty=1.3,
+                length_penalty=1.0,
+                no_repeat_ngram_size=3,
                 pad_token_id=tokenizer.pad_token_id
             )
             
@@ -185,7 +176,7 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}, Validation Loss: {val_loss}")
     writer.add_scalar("Loss/Validation", val_loss, epoch)
 
-    # Compute ROUGE score
+    # ROUGE scores
     rouge_score = rouge.compute(predictions=all_predictions, references=all_references)
     print(f"Epoch {epoch + 1}, ROUGE Score: {rouge_score}")
 
@@ -194,12 +185,12 @@ for epoch in range(num_epochs):
     writer.add_scalar("ROUGE/ROUGE-L", rouge_score["rougeL"], epoch)
     writer.add_scalar("ROUGE/ROUGE-Lsum", rouge_score["rougeLsum"], epoch)
 
-    # Early stopping
+    # early stopping
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         early_stop_counter = 0
-        model.save_pretrained("./best_model_big_patent_5_training")
-        tokenizer.save_pretrained("./best_model_big_patent_5_training")
+        model.save_pretrained("./best_model_big_patent_7_training")
+        tokenizer.save_pretrained("./best_model_big_patent_7_training")
     else:
         early_stop_counter += 1
         if early_stop_counter >= patience:
@@ -213,8 +204,8 @@ for epoch in range(num_epochs):
         'best_val_loss': best_val_loss
     }, f"./checkpoint_epoch_{epoch + 1}.pth")
 
-# 11. Final save
-output_dir = "./llama_final_model_big_patent_5_training"
+# final save
+output_dir = "./llama_final_model_big_patent_7_training"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 writer.close()
