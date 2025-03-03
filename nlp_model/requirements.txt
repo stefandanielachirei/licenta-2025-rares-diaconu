@@ -1,7 +1,10 @@
-fastapi==0.95.2
-uvicorn==0.22.0
-transformers==4.31.0
-numpy==1.23.5
-requests==2.31.0
-#datasets
-#accelerate
+fastapi
+uvicorn
+transformers==4.43.1
+numpy==1.26.4
+requests
+peft==0.10.0
+accelerate==0.25.0
+bitsandbytes==0.41.1
+scipy==1.15.2
+

@@ -3,13 +3,18 @@ services:
     image: postgres:14
     container_name: my_postgres_db
     environment:
-      POSTGRES_USER: spax
-      POSTGRES_PASSWORD: spax
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
     volumes:
       - ./db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d postgres"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
     networks:
       - mynetwork
 
@@ -17,18 +22,18 @@ services:
     build: ./backend
     container_name: fastapi_app
     environment:
-      POSTGRES_USER: spax
-      POSTGRES_PASSWORD: spax
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
     volumes:
       - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     networks:
       - mynetwork
-    depends_on:
-      - postgres
-      - nlp_model
 
   nginx:
     image: nginx:latest
@@ -50,6 +55,8 @@ services:
       - ./nlp_model:/app
     ports:
       - "8001:8001"
+    depends_on:
+      - fastapi_app
     networks:
       - mynetwork
 
