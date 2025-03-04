@@ -35,6 +35,54 @@ services:
     networks:
       - mynetwork
 
+  idm_db:
+    image: postgres:14
+    container_name: idm_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: idm_db
+    volumes:
+      - db_data2:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d idm_db"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+    networks:
+      - mynetwork
+
+  idm_service:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: idm_service
+    ports:
+      - "50051:50051"
+    environment: 
+      - DATABASE_URL=postgresql://user:password@idm_db:5432/idm_db
+    depends_on:
+      idm_db:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  idm_api:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile.api
+    container_name: idm_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      idm_db:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -59,6 +107,10 @@ services:
       - fastapi_app
     networks:
       - mynetwork
+
+volumes:
+  db_data:
+  db_data2:
 
 networks:
   mynetwork:

@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+grpcio
+grpcio-tools
+psycopg2-binary
+pydantic
+sqlalchemy
+pyjwt
+protobuf
+python-dotenv
+python-multipart

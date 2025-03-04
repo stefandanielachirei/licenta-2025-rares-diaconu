@@ -4,8 +4,11 @@ from peft import PeftModel
 from schemas import TextRequest
 import torch
 import os
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+load_dotenv()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
