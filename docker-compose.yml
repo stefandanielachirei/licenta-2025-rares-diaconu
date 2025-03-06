@@ -87,8 +87,8 @@ services:
     image: nginx:latest
     container_name: nginx
     volumes:
-      - /d/Facultate/AN4/Licenta/nginx.conf:/etc/nginx/nginx.conf
-      - /d/Facultate/AN4/Licenta/frontend/goodreads/dist/goodreads:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend/goodreads/dist/goodreads:/usr/share/nginx/html
     ports:
       - "80:80"
     depends_on:
@@ -107,6 +107,13 @@ services:
       - fastapi_app
     networks:
       - mynetwork
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   db_data:
