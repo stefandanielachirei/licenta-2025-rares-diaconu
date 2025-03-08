@@ -83,6 +83,21 @@ services:
     networks:
       - mynetwork
 
+  frontend:
+    build:
+      context: ./goodreads
+      dockerfile: Dockerfile
+    container_name: nextjs_app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - fastapi_app
+    networks:
+      - mynetwork
+
+
   nginx:
     image: nginx:latest
     container_name: nginx
