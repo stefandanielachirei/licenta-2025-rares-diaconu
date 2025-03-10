@@ -1,0 +1,114 @@
+de pus pe hartie functionalitatile si ce vreau sa mai fac pe backend
+de adaugat cartile in baza de date si legatura cu email-ul pentru a putea face in fe
+asta dupa ce am facut backend-ul macar partea de carti de facut pagina de login cu tot cu register si de vazut ce voi face in backend luata de la pos
+de facut un design si de pus functionalitatile pe hartie cam ce vreau sa implementez
+
+
+o sa fie in mare un app in care o sa fie o pagina care se deschide cu cartile disponibile de pe site, un buton de search pentru alte carti. apoi un buton de to_read care va
+adauga cartea intr-o lista care va fi afisata pe o alta pagina la cele de to_read. daca apasa pe carte va fi poza sus cu titlul sub si autorul cu isbn si apoi review-uri la
+acea carte si undeva in stanga sau dreapta review-ului va fi analiza sentimentelor facuta cu nlp pe acel review, in cealalta parte va fi rezumatul review-ului facut cu 
+nlp si mai sus de review-uri trebuie sa fie si rezumatul cartii facut tot cu nlp.
+meniul va fi ca la pos in partea stanga unde vor fi cartile, apoi to read, change password, delete account, log out
+la admin va fi stergere user si introducere carti, review-uri(poate)
+
+idm_db:
+    image: postgres:14
+    container_name: idm_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: idm_db
+    volumes:
+      - db_data2:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d idm_db"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+    networks:
+      - mynetwork
+
+  idm_service:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: idm_service
+    ports:
+      - "50051:50051"
+    environment: 
+      - DATABASE_URL=postgresql://user:password@idm_db:5432/idm_db
+    depends_on:
+      idm_db:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  idm_api:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile.api
+    container_name: idm_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      idm_db:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  frontend:
+    build:
+      context: ./goodreads
+      dockerfile: Dockerfile
+    container_name: nextjs_app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - fastapi_app
+    networks:
+      - mynetwork
+
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./goodreads/out:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    depends_on:
+      - fastapi_app
+    networks:
+      - mynetwork
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  nlp_model:
+    build: ./nlp_model
+    container_name: nlp_model
+    volumes:
+      - ./nlp_model:/app
+    ports:
+      - "8001:8001"
+    depends_on:
+      - fastapi_app
+    networks:
+      - mynetwork
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

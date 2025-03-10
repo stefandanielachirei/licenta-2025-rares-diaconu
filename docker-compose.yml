@@ -17,6 +17,13 @@ services:
       timeout: 5s
     networks:
       - mynetwork
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   fastapi_app:
     build: ./backend
@@ -27,99 +34,13 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - ./backend:/app
+      - ./goodreads_reviews_spoiler.json:/app/goodreads_reviews_spoiler.json
+      - ./books.csv:/app/books.csv
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - "8000:8000"
-    networks:
-      - mynetwork
-
-  idm_db:
-    image: postgres:14
-    container_name: idm_db
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: idm_db
-    volumes:
-      - db_data2:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d idm_db"]
-      interval: 5s
-      retries: 5
-      timeout: 5s
-    networks:
-      - mynetwork
-
-  idm_service:
-    build:
-      context: ./auth
-      dockerfile: Dockerfile
-    container_name: idm_service
-    ports:
-      - "50051:50051"
-    environment: 
-      - DATABASE_URL=postgresql://user:password@idm_db:5432/idm_db
-    depends_on:
-      idm_db:
-        condition: service_healthy
-    networks:
-      - mynetwork
-
-  idm_api:
-    build:
-      context: ./auth
-      dockerfile: Dockerfile.api
-    container_name: idm_api
-    ports:
-      - "8080:8080"
-    depends_on:
-      idm_db:
-        condition: service_healthy
-    networks:
-      - mynetwork
-
-  frontend:
-    build:
-      context: ./goodreads
-      dockerfile: Dockerfile
-    container_name: nextjs_app
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - fastapi_app
-    networks:
-      - mynetwork
-
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./frontend/goodreads/dist/goodreads:/usr/share/nginx/html
-    ports:
-      - "80:80"
-    depends_on:
-      - fastapi_app
-    networks:
-      - mynetwork
-
-  nlp_model:
-    build: ./nlp_model
-    container_name: nlp_model
-    volumes:
-      - ./nlp_model:/app
-    ports:
-      - "8001:8001"
-    depends_on:
-      - fastapi_app
     networks:
       - mynetwork
     deploy:

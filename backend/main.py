@@ -11,11 +11,6 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class Test(Base):
-    __tablename__ = 'test'
-    id = Column(Integer, primary_key=True, index=True)
-    text = Column(String(80), unique=True, nullable=False)
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -27,16 +22,6 @@ class TestResponse(BaseModel):
 
 class PromptRequest(BaseModel):
     prompt: str
-
-@app.get("/api/text", response_model=TestResponse)
-def get_text():
-    db = SessionLocal()
-    first_entry = db.query(Test).first()
-    db.close()
-    if first_entry:
-        return {"text": first_entry.text}
-    else:
-        raise HTTPException(status_code=404, detail="No entries found in the database!")
 
 @app.post("/generate_text")
 def generate_text(request: PromptRequest) :
