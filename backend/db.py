@@ -41,7 +41,7 @@ def import_books():
         
         book = Book(
             title=row['title'],
-            author=row['author'],
+            author=row['authors'].split(",")[0] if 'authors' in row and pd.notna(row['authors']) else "Unknown",
             isbn=isbn,
             image_url=image_url
         )
