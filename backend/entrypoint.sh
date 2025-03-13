@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "Așteptăm PostgreSQL să pornească..."
+echo "Waiting for PostgreSQL to launch..."
 sleep 5
 
-echo "Populăm baza de date..."
-python db.py || { echo "Eroare la popularea bazei de date"; exit 1; }
+echo "Populating the database..."
+python db.py || { echo "Error at populating the database"; exit 1; }
 
-echo "Pornim aplicația..."
+echo "Starting the app..."
 exec uvicorn main:app --host 0.0.0.0 --port 8000

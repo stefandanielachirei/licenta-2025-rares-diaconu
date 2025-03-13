@@ -1,8 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
+from database import get_db, engine
+from models import Base, Book, Review
 import os
 import requests
 
@@ -31,3 +33,12 @@ def generate_text(request: PromptRequest) :
         return response.json()
     else:
         raise HTTPException(status_code=response.status_code, detail="Error generating text")
+    
+@app.get("/books")
+def get_books(db: Session = Depends(get_db)):
+    return db.query(Book).limit(10).all()
+
+@app.get("/reviews")
+def get_reviews(db: Session = Depends(get_db)):
+    reviews = db.query(Review).limit(10).all()
+    return reviews

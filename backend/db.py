@@ -22,18 +22,18 @@ def summarize_text(text):
         summary = summarizer(text, max_length=100, min_length=30, do_sample=False)
         return summary[0]['summary_text']
     except Exception as e:
-        print(f"Sumarizare eșuată: {e}")
+        print(f"Failed summarization: {e}")
         return text
 
 def import_books():
     db = SessionLocal()
     
     if db.query(Book).count() > 0:
-        print("Cărțile sunt deja în baza de date.")
+        print("The books are already in the database.")
         db.close()
         return
     
-    books_df = pd.read_csv("books.csv")
+    books_df = pd.read_csv("books.csv", nrows=30)
 
     for _, row in books_df.iterrows():
         isbn = str(row['isbn']) if 'isbn' in row else None
@@ -49,22 +49,32 @@ def import_books():
 
     db.commit()
     db.close()
-    print("Cărțile au fost importate cu succes!")
+    print("The books have been imported with success!")
 
 def import_reviews():
-    """Importă review-urile din goodreads_reviews_spoiler.json și le rezumă."""
-    db = SessionLocal()
+    """Importă și rezumă un review pentru fiecare carte din baza de date (maxim 30)."""
+    db: Session = SessionLocal()
 
     if db.query(Review).count() > 0:
-        print("Review-urile sunt deja în baza de date.")
+        print("The reviews are already in the database.")
         db.close()
         return
+
+    # Obținem toate ID-urile cărților existente în baza de date
+    existing_books = {str(book.id): book for book in db.query(Book).all()}
+    
+    count = 0
+    used_books = set()
 
     with open("goodreads_reviews_spoiler.json", "r") as f:
         for line in f:
             review_data = json.loads(line)
-            book_id = review_data.get("book_id")
-            review_text = review_data.get("review_text", "")
+            book_id = str(review_data.get("book_id")).strip()
+
+            if book_id not in existing_books or book_id in used_books:
+                continue
+
+            review_text = review_data.get("review_text", "").strip()
 
             if not review_text or len(review_text) < 10:
                 continue
@@ -78,10 +88,16 @@ def import_reviews():
                 summary=summary
             )
             db.add(review)
+            count += 1
+            used_books.add(book_id)
+
+            if count >= 30:
+                break
 
     db.commit()
     db.close()
-    print("Review-urile au fost importate și sumarizate!")
+    print(f"{count} reviews were imported and summarized!")
+
 
 if __name__ == "__main__":
     import_books()
