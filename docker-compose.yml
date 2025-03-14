@@ -32,9 +32,10 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
+      CUDA_LAUNCH_BLOCKING: 1
     volumes:
       - ./backend:/app
-      - ./goodreads_reviews_spoiler.json:/app/goodreads_reviews_spoiler.json
+      - ./goodreads_reviews_spoiler_raw.json:/app/goodreads_reviews_spoiler_raw.json
       - ./books.csv:/app/books.csv
     depends_on:
       postgres:

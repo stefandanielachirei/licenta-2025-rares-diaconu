@@ -9,6 +9,7 @@ class Book(Base):
     title = Column(String, nullable=False, index=True)
     author = Column(String)
     isbn = Column(String, unique=True)
+    goodreads_id = Column(String, unique=True, nullable=False)
     image_url = Column(Text, nullable=True)
 
     reviews = relationship("Review", back_populates="book", cascade="all, delete-orphan")

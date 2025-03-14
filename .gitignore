@@ -4,5 +4,6 @@ backend/venv/
 db_data/
 nlp_model/env
 nlp_model/.env
-goodreads_reviews_spoiler.json
+goodreads_reviews_spoiler_raw.json
 books.csv
+test.py

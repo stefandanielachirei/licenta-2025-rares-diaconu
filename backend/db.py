@@ -1,104 +1,114 @@
 import pandas as pd
 import json
 import requests
-from transformers import pipeline
+import gc
+import torch
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
-from models import Base, Book, Review
+from models import Base, Book, Review, User
 
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,  # Sau load_in_4bit=True pentru și mai puțină memorie
+    bnb_4bit_compute_dtype=torch.float16,
+    llm_int8_threshold=6.0
+)
 
+model_id = "sshleifer/distilbart-cnn-12-6"
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    model_id,
+    quantization_config=quantization_config,
+    device_map="auto"  # Plasează automat pe GPU dacă este disponibil
+)
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
+
+def create_default_user():
+    db = SessionLocal()
+    existing_user = db.query(User).filter(User.email == "anonim@gmail.com").first()
+    
+    if not existing_user:
+        user = User(email="anonim@gmail.com", role="user")
+        db.add(user)
+        db.commit()
+        print("Default user 'anonim@gmail.com' created.")
+    
+    db.close()
 
 def fetch_cover_url(isbn):
     url = f"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg"
     response = requests.get(url)
     return url if response.status_code == 200 else None
 
-def summarize_text(text):
-    if len(text) < 50:
-        return text
-    try:
-        summary = summarizer(text, max_length=100, min_length=30, do_sample=False)
-        return summary[0]['summary_text']
-    except Exception as e:
-        print(f"Failed summarization: {e}")
-        return text
-
 def import_books():
+    """Importă cărțile din CSV și salvează goodreads_id în baza de date."""
     db = SessionLocal()
-    
+
     if db.query(Book).count() > 0:
         print("The books are already in the database.")
         db.close()
         return
     
-    books_df = pd.read_csv("books.csv", nrows=30)
+    books_df = pd.read_csv("books.csv", nrows=3)
 
     for _, row in books_df.iterrows():
-        isbn = str(row['isbn']) if 'isbn' in row else None
+        isbn = str(row['isbn']) if 'isbn' in row and pd.notna(row['isbn']) else None
+        goodreads_id = str(row['goodreads_book_id']) if 'goodreads_book_id' in row and pd.notna(row['goodreads_book_id']) else None
         image_url = fetch_cover_url(isbn) if isbn else None
-        
+
         book = Book(
-            title=row['title'],
-            author=row['authors'].split(",")[0] if 'authors' in row and pd.notna(row['authors']) else "Unknown",
+            title=row['book_id'],  # Trebuie să verifici dacă 'book_id' este corect pentru titlu
+            author="anonim@gmail.com",  # Modifică dacă ai coloana cu autori
             isbn=isbn,
+            goodreads_id=goodreads_id,  # Folosim goodreads_id
             image_url=image_url
         )
         db.add(book)
 
     db.commit()
     db.close()
-    print("The books have been imported with success!")
+    print("The books have been imported successfully!")
 
 def import_reviews():
-    """Importă și rezumă un review pentru fiecare carte din baza de date (maxim 30)."""
     db: Session = SessionLocal()
 
     if db.query(Review).count() > 0:
         print("The reviews are already in the database.")
         db.close()
         return
-
-    # Obținem toate ID-urile cărților existente în baza de date
-    existing_books = {str(book.id): book for book in db.query(Book).all()}
     
-    count = 0
-    used_books = set()
-
-    with open("goodreads_reviews_spoiler.json", "r") as f:
+    existing_books = {str(book.goodreads_id): book.id for book in db.query(Book).all() if book.goodreads_id}
+    
+    with open("goodreads_reviews_spoiler_raw.json", "r", encoding="utf-8-sig") as f:
         for line in f:
-            review_data = json.loads(line)
-            book_id = str(review_data.get("book_id")).strip()
-
-            if book_id not in existing_books or book_id in used_books:
+            try:
+                review_data = json.loads(line)
+                book_id = str(review_data.get("book_id")).strip()
+                review_text = review_data.get("review_text", "").strip()
+                
+                if book_id not in existing_books or not review_text or len(review_text) < 10:
+                    continue
+                
+                review = Review(
+                    book_id=existing_books[book_id],
+                    user_email="anonim@gmail.com",
+                    review_text=review_text
+                )
+                db.add(review)
+                db.commit()
+            
+            except Exception as e:
+                print(f"Skipping review due to error: {e}")
+                db.rollback()
                 continue
-
-            review_text = review_data.get("review_text", "").strip()
-
-            if not review_text or len(review_text) < 10:
-                continue
-
-            summary = summarize_text(review_text)
-
-            review = Review(
-                book_id=book_id,
-                user_email="anonim@gmail.com",
-                review_text=review_text,
-                summary=summary
-            )
-            db.add(review)
-            count += 1
-            used_books.add(book_id)
-
-            if count >= 30:
-                break
-
-    db.commit()
+    
     db.close()
-    print(f"{count} reviews were imported and summarized!")
+    print("All matching reviews were imported!")
 
 
 if __name__ == "__main__":
+    create_default_user()
     import_books()
     import_reviews()
