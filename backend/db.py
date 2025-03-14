@@ -1,27 +1,10 @@
 import pandas as pd
 import json
 import requests
-import gc
-import torch
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from models import Base, Book, Review, User
 
-quantization_config = BitsAndBytesConfig(
-    load_in_4bit=True,  # Sau load_in_4bit=True pentru și mai puțină memorie
-    bnb_4bit_compute_dtype=torch.float16,
-    llm_int8_threshold=6.0
-)
-
-model_id = "sshleifer/distilbart-cnn-12-6"
-model = AutoModelForSeq2SeqLM.from_pretrained(
-    model_id,
-    quantization_config=quantization_config,
-    device_map="auto"  # Plasează automat pe GPU dacă este disponibil
-)
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
@@ -43,7 +26,6 @@ def fetch_cover_url(isbn):
     return url if response.status_code == 200 else None
 
 def import_books():
-    """Importă cărțile din CSV și salvează goodreads_id în baza de date."""
     db = SessionLocal()
 
     if db.query(Book).count() > 0:
@@ -59,10 +41,10 @@ def import_books():
         image_url = fetch_cover_url(isbn) if isbn else None
 
         book = Book(
-            title=row['book_id'],  # Trebuie să verifici dacă 'book_id' este corect pentru titlu
-            author="anonim@gmail.com",  # Modifică dacă ai coloana cu autori
+            title=row['book_id'],
+            author="anonim@gmail.com",
             isbn=isbn,
-            goodreads_id=goodreads_id,  # Folosim goodreads_id
+            goodreads_id=goodreads_id,
             image_url=image_url
         )
         db.add(book)
