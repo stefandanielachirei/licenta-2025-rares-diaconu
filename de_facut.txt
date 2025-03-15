@@ -11,6 +11,9 @@ nlp si mai sus de review-uri trebuie sa fie si rezumatul cartii facut tot cu nlp
 meniul va fi ca la pos in partea stanga unde vor fi cartile, apoi to read, change password, delete account, log out
 la admin va fi stergere user si introducere carti, review-uri(poate)
 
+chestii pentru luni:
+
+
 idm_db:
     image: postgres:14
     container_name: idm_db
