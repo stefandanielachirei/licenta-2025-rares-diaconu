@@ -184,9 +184,7 @@ def get_reviews(request: Request,
     }
 
 @app.delete("/deleteUser")
-def delete_user(request: Request, email: str = Query(...), db: Session = Depends(get_db)):
-
-    validate_admin_role(request=request)
+def delete_user(email: str = Query(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
