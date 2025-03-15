@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import get_db, engine
 import models
-import schemas
 import requests
 from fastapi.responses import JSONResponse
-from models import User, Book, UserBook, Review
+from models import User, Book, Review
 from schemas import PromptRequest, UserCreateRequest
+from middleware import TokenValidationMiddleware
 
 app = FastAPI(
     title="Web application similar with goodreads using natural language processing(NLP) and RESTFul APIs",
@@ -24,7 +24,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
+
+def validate_admin_role(request: Request):
+    user = request.scope.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized: User not authenticated")
+    if user is None or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
+    
+def validate_user_role(request: Request):
+    user = request.scope.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized: User not authenticated")
+    if user is None or user.get("role") != "user":
+        raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
 @app.post("/save-user")
 def save_user(user_data: UserCreateRequest, db: Session = Depends(get_db)):

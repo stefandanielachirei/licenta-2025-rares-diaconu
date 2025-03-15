@@ -11,3 +11,6 @@ accelerate==0.25.0
 bitsandbytes==0.41.3
 scipy==1.15.2
 python-dotenv
+grpcio
+grpcio-tools
+pyjwt
