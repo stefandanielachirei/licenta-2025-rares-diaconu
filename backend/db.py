@@ -73,7 +73,7 @@ def import_books():
 
         book = Book(
             title=row['original_title'],
-            author="anonim@gmail.com",
+            author=row['authors'].split(",")[0] if 'authors' in row and pd.notna(row['authors']) else "Unknown",
             isbn=isbn,
             goodreads_id=goodreads_id,
             image_url=image_url

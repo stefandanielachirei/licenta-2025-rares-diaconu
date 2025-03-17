@@ -73,7 +73,12 @@ def create_book(request: Request, book : BookCreate, db: Session = Depends(get_d
     db.refresh(new_book)
     response_data = {
         "message": "Book created successfully",
-        **new_book.__dict__
+        "id": new_book.id,
+        "title": new_book.title,
+        "author": new_book.author,
+        "isbn": new_book.isbn,
+        "goodreads_id": new_book.goodreads_id,
+        "image_url": new_book.image_url,
     }
     return JSONResponse(status_code=201, content=response_data)
 
@@ -128,7 +133,12 @@ def update_book(request: Request, book_id: int, book_update : BookUpdate, db: Se
     db.commit()
     response_data = {
         "message": "Book updated successfully",
-        **book.__dict__
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "isbn": book.isbn,
+        "goodreads_id": book.goodreads_id,
+        "image_url": book.image_url,
     }
     return JSONResponse(status_code=200, content=response_data)
 

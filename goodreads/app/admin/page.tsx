@@ -50,6 +50,36 @@ const AdminDashboard = () => {
     }
   };
 
+  const deleteBook = async(bookId: number) => {
+    try{
+      const token = window.localStorage.getItem("token");
+      if(!token){
+        throw new Error("Authentication token is missing");
+      }
+
+      const professor = books.find((book: any) => book.id === bookId);
+      if (!professor) {
+        throw new Error("Book not found");
+      }
+
+      const response = await fetch(`http://localhost:8000/books/${bookId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if(!response.ok){
+        throw new Error(`Failed to delete book: ${response.statusText}`);
+      }
+
+      setBooks((prev) => prev.filter((book:any) => book.id !== bookId));
+      
+    }catch (err: any) {
+      alert(err.message);
+    }
+  }
+
   const handleLogout = async () => {
     try {
       const token = window.localStorage.getItem("token");
@@ -98,6 +128,7 @@ const AdminDashboard = () => {
                           <th className="border border-gray-300 px-4 py-2">Author</th>
                           <th className="border border-gray-300 px-4 py-2">ISBN</th>
                           <th className="border border-gray-300 px-4 py-2">Image_URL</th>
+                          <th className="border border-gray-300 px-4 py-2">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -108,12 +139,33 @@ const AdminDashboard = () => {
                             <td className="border border-gray-300 px-4 py-2">{book.author}</td>
                             <td className="border border-gray-300 px-4 py-2">{book.isbn}</td>
                             <td className="border border-gray-300 px-4 py-2">{book.image_url}</td>
+                            <td className="border border-gray-300 px-4 py-2">
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => router.push(`admin/book_update?id=${book.id}`)}
+                                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition">
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => deleteBook(book.id)}
+                                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 transition"
+                                        >
+                                        Delete
+                                    </button>
+                                </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
           
                     <div className="flex items-center justify-center gap-4 mt-4">
+                        <button
+                        onClick={() => router.push(`admin/book_create`)}
+                        className="bg-yellow-500 px-6 py-2 rounded-lg flex items-center hover:bg-purple-200 transition"
+                      >
+                        Create
+                      </button>
                       <button
                         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                         className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-gray-200 transition"

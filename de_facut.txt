@@ -13,7 +13,7 @@ la admin va fi stergere user si introducere carti, review-uri(poate)
 
 chestii pentru luni:
 	- de facut pagina de admin in fe toata:
-		- prima pagina ca cea de la pos un pic modificata cu previous si next la paginare si butoanele altundeva : create, update, get * 2, delete
+		- prima pagina ca cea de la pos un pic modificata cu previous si next la paginare si butoanele altundeva : create, update, get * 2, delete - facut
 		- a doua va fi cu review-uri tot cu paginarea ca la prima : get, delete
 		- a treia va fi cu delete account cu cele 2 cereri spre backend si auth
 		- a patra cu logout - facut
