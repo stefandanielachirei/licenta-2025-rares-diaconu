@@ -4,6 +4,8 @@ import requests
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from models import Base, Book, Review, User
+from PIL import Image
+import io
 
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
@@ -23,7 +25,16 @@ def create_default_user():
 def fetch_cover_url(isbn):
     url = f"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg"
     response = requests.get(url)
-    return url if response.status_code == 200 else None
+    
+    if response.status_code == 200:
+        try:
+            image = Image.open(io.BytesIO(response.content))
+            if image.size[0] > 1 and image.size[1] > 1:
+                return url
+        except Exception as e:
+            print(f"Invalid image for ISBN {isbn}: {e}")
+    
+    return None
 
 def import_books():
     db = SessionLocal()
@@ -41,7 +52,7 @@ def import_books():
         image_url = fetch_cover_url(isbn) if isbn else None
 
         book = Book(
-            title=row['book_id'],
+            title=row['original_title'],
             author="anonim@gmail.com",
             isbn=isbn,
             goodreads_id=goodreads_id,
