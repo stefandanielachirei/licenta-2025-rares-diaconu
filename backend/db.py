@@ -7,7 +7,6 @@ from models import Base, Book, Review, User
 from PIL import Image
 import io
 
-Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 def create_default_user():
