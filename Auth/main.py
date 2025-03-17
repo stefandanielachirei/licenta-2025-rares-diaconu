@@ -180,28 +180,3 @@ async def register(request: RegisterRequestModel):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"User registration failed: {str(e)}")
-
-@app.post("/deleteAccount")
-async def delete_account(request: DeleteAccountRequestModel, user_info: dict = Depends(validate_bearer_token)):
-    
-    if user_info["role"] == "admin":
-        raise HTTPException(status_code=403, detail="Permission denied")
-
-    stub = get_grpc_stub()
-
-    grpc_request = idm_service_pb2.DeleteAccountRequest(
-        username = request.username
-    )
-
-    try:
-        grpc_response = stub.DeleteAccount(grpc_request)
-        if not grpc_response.success:
-            raise HTTPException(status_code=400, detail=grpc_response.message)
-
-        return {"message": grpc_response.message}
-
-    except grpc.RpcError as e:
-        raise HTTPException(status_code=500, detail=f"gRPC error: {e.details()}")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Account deletion failed: {str(e)}")

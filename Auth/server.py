@@ -192,32 +192,11 @@ class IDMServiceServices(idm_service_pb2_grpc.IDMServiceServicer) :
 
             print(f"User registered: {request.username}")
             return idm_service_pb2.RegisterResponse(success=True, message="User registered successfully")
-        except:
+        except Exception as e:
             print(f"Error during user registration: {str(e)}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details("Internal server error")
             return idm_service_pb2.RegisterResponse(success=False, message="Failed to register user")
-
-    def DeleteAccount(self, request, context):
-        try:
-            user = self.db.query(User).filter(User.email == request.username).first()
-            if not user:
-                print(f"User with email {request.username} does not exist.")
-                context.set_code(grpc.StatusCode.NOT_FOUND)
-                context.set_details("User not found")
-                return idm_service_pb2.DeleteAccountResponse(success=False, message="User not found")
-            
-            self.db.delete(user)
-            self.db.commit()
-
-            print(f"User {request.username} deleted successfully")
-            return idm_service_pb2.DeleteAccountResponse(success=True, message="User deleted successfully")
-
-        except:
-            print(f"Error during user deletion: {str(e)}")
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal server error")
-            return idm_service_pb2.DeleteAccountResponse(success=False, message="Failed to delete user")
      
 def initialize_admin():
     try:

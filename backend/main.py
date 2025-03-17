@@ -193,6 +193,11 @@ def get_reviews(request: Request,
         "reviews": [sanitize_dict(review) for review in reviews],
     }
 
+@app.get("/users", response_model=list[dict[str, str]])
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [{"email": user.email, "role": user.role} for user in users]
+
 @app.delete("/deleteUser")
 def delete_user(email: str = Query(...), db: Session = Depends(get_db)):
 
