@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from models import User, Book, Review
 from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate
 from middleware import TokenValidationMiddleware
+from pydantic import BaseModel
 
 app = FastAPI(
     title="Web application similar with goodreads using natural language processing(NLP) and RESTFul APIs",
@@ -26,6 +27,21 @@ app.add_middleware(
 
 app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
+
+SERVER_URL = "http://192.168.251.219:8000/analyze-sentiment"
+
+class ReviewRequest(BaseModel):
+    review: str
+
+@app.post("/sentiment_analysis")
+async def sentiment_analysis(request: ReviewRequest):
+    payload = {"review": request.review}
+    response = requests.post(SERVER_URL, json=payload)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": response.text, "status_code": response.status_code}
 
 def sanitize_dict(obj):
     return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
