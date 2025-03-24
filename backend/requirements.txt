@@ -5,11 +5,6 @@ psycopg2-binary
 pydantic[email]
 requests
 pandas
-transformers==4.43.1
-numpy==1.26.4
-accelerate==0.25.0
-bitsandbytes==0.41.3
-scipy==1.15.2
 python-dotenv
 grpcio
 grpcio-tools

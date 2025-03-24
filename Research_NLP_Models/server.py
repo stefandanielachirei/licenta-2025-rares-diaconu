@@ -7,7 +7,7 @@ app = FastAPI()
 
 device = 0 if torch.cuda.is_available() else -1
 
-model_name_sentiment = "allenai/longformer-base-4096"
+model_name_sentiment = "distilbert-base-uncased-finetuned-sst-2-english"
 sentiment_pipeline = pipeline(
     "sentiment-analysis",
     model=model_name_sentiment,

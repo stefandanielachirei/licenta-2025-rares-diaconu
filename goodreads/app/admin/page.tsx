@@ -6,22 +6,45 @@ import "./styles.css";
 
 const AdminDashboard = () => {
   const [activePage, setActivePage] = useState("books");
-  const router = useRouter();
   const [books, setBooks] = useState<any[]>([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(2);
+  const [currentPageBooks, setCurrentPageBooks] = useState(1);
+  const [itemsPerPageBooks, setItemsPerPageBooks] = useState(2);
+  const [currentPageReviews, setCurrentPageReviews] = useState(1);
+  const [itemsPerPageReviews, setItemsPerPageReviews] = useState(2);
+  const router = useRouter();
 
   const changePage = (page: string) => {
     setActivePage(page);
   };
 
+  const getActivePageFromQuery = () => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get("activePage") || localStorage.getItem("activePage") || "books";
+    }
+    return "books";
+  };
+
+  useEffect(() => {
+    const page = getActivePageFromQuery();
+    setActivePage(page);
+    window.localStorage.setItem("activePage", page);
+  }, []);
+  
   useEffect(() => {
     if (activePage === "books") {
       fetchBooks();
     }
-  }, [activePage, currentPage, itemsPerPage]);
+  }, [activePage, currentPageBooks, itemsPerPageBooks]);
+  
+  useEffect(() => {
+    if (activePage === "reviews") {
+      fetchReviews();
+    }
+  }, [activePage, currentPageReviews, itemsPerPageReviews]); 
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -31,7 +54,7 @@ const AdminDashboard = () => {
         if(!token){
             throw new Error("Authentication token is missing");
         }
-        const response = await fetch(`http://localhost:8000/books?page=${currentPage}&items_per_page=${itemsPerPage}`, {
+        const response = await fetch(`http://localhost:8000/books?page=${currentPageBooks}&items_per_page=${itemsPerPageBooks}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -44,6 +67,33 @@ const AdminDashboard = () => {
         const data = await response.json();
         setBooks(data.books);
     } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token is missing");
+      }
+      const response = await fetch(`http://localhost:8000/reviews?page=${currentPageReviews}&items_per_page=${itemsPerPageReviews}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch reviews: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setReviews(data.reviews);
+    } catch (err : any) {
       setError(err.message);
     } finally {
       setLoading(false);
@@ -167,16 +217,16 @@ const AdminDashboard = () => {
                         Create
                       </button>
                       <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        onClick={() => setCurrentPageBooks((prev) => Math.max(prev - 1, 1))}
                         className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-gray-200 transition"
                       >
                         ← PREV
                       </button>
           
-                      <span className="text-lg font-semibold">Page {currentPage}</span>
+                      <span className="text-lg font-semibold">Page {currentPageBooks}</span>
           
                       <button
-                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                        onClick={() => setCurrentPageBooks((prev) => prev + 1)}
                         className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-pink-200 transition"
                       >
                         NEXT →
@@ -185,8 +235,8 @@ const AdminDashboard = () => {
                       <div className="flex items-center border border-black px-4 py-2 rounded-lg">
                         <span className="mr-2">Items/Page:</span>
                         <select
-                          value={itemsPerPage}
-                          onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                          value={itemsPerPageBooks}
+                          onChange={(e) => setItemsPerPageBooks(Number(e.target.value))}
                           className="bg-transparent focus:outline-none"
                         >
                           <option value={2}>2</option>
@@ -200,7 +250,75 @@ const AdminDashboard = () => {
               </div>
             );          
       case "reviews":
-        return <h1 className="text-2xl font-bold">Manage Reviews</h1>;
+        return (
+          <div className="p-8">
+            <h1 className="text-2xl font-bold mb-4">Manage Reviews</h1>
+            {loading && <p className="text-blue-500">Loading...</p>}
+            {error && <p className="text-red-500">Error: {error}</p>}
+            {!loading && reviews.length > 0 && (
+              <>
+                <table className="table-auto w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-300 px-4 py-2">ID</th>
+                      <th className="border border-gray-300 px-4 py-2">Book ID</th>
+                      <th className="border border-gray-300 px-4 py-2">User Email</th>
+                      <th className="border border-gray-300 px-4 py-2">Review Text</th>
+                      <th className="border border-gray-300 px-4 py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reviews.map((review : any, index) => (
+                      <tr key={index}>
+                        <td className="border border-gray-300 px-4 py-2">{review.id}</td>
+                        <td className="border border-gray-300 px-4 py-2">{review.book_id}</td>
+                        <td className="border border-gray-300 px-4 py-2">{review.user_email}</td>
+                        <td className="border border-gray-300 px-4 py-2">{review.review_text}</td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => console.log("Delete function not implemented")}
+                              className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex items-center justify-center gap-4 mt-4">
+                  <button
+                    onClick={() => setCurrentPageReviews((prev) => Math.max(prev - 1, 1))}
+                    className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-gray-200 transition"
+                  >
+                    ← PREV
+                  </button>
+                  <span className="text-lg font-semibold">Page {currentPageReviews}</span>
+                  <button
+                    onClick={() => setCurrentPageReviews((prev) => prev + 1)}
+                    className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-pink-200 transition"
+                  >
+                    NEXT →
+                  </button>
+                  <div className="flex items-center border border-black px-4 py-2 rounded-lg">
+                    <span className="mr-2">Items/Page:</span>
+                    <select
+                      value={itemsPerPageReviews}
+                      onChange={(e) => setItemsPerPageReviews(Number(e.target.value))}
+                      className="bg-transparent focus:outline-none"
+                    >
+                      <option value={2}>2</option>
+                      <option value={4}>4</option>
+                      <option value={6}>6</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        );
       case "deleteAccount":
         return <h1 className="text-2xl font-bold">Delete Account</h1>;
       case "logout":
