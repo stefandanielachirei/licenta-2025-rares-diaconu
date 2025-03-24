@@ -209,10 +209,29 @@ def get_reviews(request: Request,
         "reviews": [sanitize_dict(review) for review in reviews],
     }
 
-@app.get("/users", response_model=list[dict[str, str]])
-def get_all_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return [{"email": user.email, "role": user.role} for user in users]
+@app.get("/users")
+def get_all_users(request: Request,
+                  page: int = 1,
+                  items_per_page: int = 10,
+                  db: Session = Depends(get_db)):
+
+    validate_admin_role(request=request)
+
+    if page < 1 or items_per_page <= 0:
+        raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
+    
+    total_users = db.query(User).count()
+    skip = (page - 1) * items_per_page
+    users = db.query(User).offset(skip).limit(items_per_page).all()
+
+    if skip >= total_users and total_users > 0:
+        raise HTTPException(status_code=416, detail="Page out of range")
+
+    return {
+        "total_users": total_users,
+        "page_number": page,
+        "users": [sanitize_dict(user) for user in users],
+    }
 
 @app.delete("/deleteUser")
 def delete_user(email: str = Query(...), db: Session = Depends(get_db)):
