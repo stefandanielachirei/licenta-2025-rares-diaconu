@@ -107,8 +107,8 @@ const AdminDashboard = () => {
         throw new Error("Authentication token is missing");
       }
 
-      const professor = books.find((book: any) => book.id === bookId);
-      if (!professor) {
+      const book = books.find((book: any) => book.id === bookId);
+      if (!book) {
         throw new Error("Book not found");
       }
 
@@ -124,6 +124,36 @@ const AdminDashboard = () => {
       }
 
       setBooks((prev) => prev.filter((book:any) => book.id !== bookId));
+      
+    }catch (err: any) {
+      alert(err.message);
+    }
+  }
+
+  const deleteReview = async(reviewId: number) => {
+    try{
+      const token = window.localStorage.getItem("token");
+      if(!token){
+        throw new Error("Authentication token is missing");
+      }
+
+      const review = books.find((review: any) => review.id === reviewId);
+      if (!review) {
+        throw new Error("Review not found");
+      }
+
+      const response = await fetch(`http://localhost:8000/reviews/${reviewId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if(!response.ok){
+        throw new Error(`Failed to delete review: ${response.statusText}`);
+      }
+
+      setReviews((prev) => prev.filter((review:any) => review.id !== reviewId));
       
     }catch (err: any) {
       alert(err.message);
@@ -277,7 +307,7 @@ const AdminDashboard = () => {
                         <td className="border border-gray-300 px-4 py-2">
                           <div className="flex gap-2">
                             <button
-                              onClick={() => console.log("Delete function not implemented")}
+                              onClick={() => deleteReview(review.id)}
                               className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 transition"
                             >
                               Delete
