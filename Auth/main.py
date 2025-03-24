@@ -136,9 +136,6 @@ async def change_password(request: ChangePasswordRequestModel, user_info: dict =
 @app.post("/deleteUser")
 async def delete_user(request: DeleteUserRequestModel, user_info: dict = Depends(validate_bearer_token)):
 
-    if user_info["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Permission denied")
-
     stub = get_grpc_stub()
 
     grpc_request_delete = idm_service_pb2.DeleteUserRequest(

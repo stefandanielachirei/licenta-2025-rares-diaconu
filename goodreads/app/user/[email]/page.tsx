@@ -79,6 +79,63 @@ const UserDashboard = () => {
     }
   };
 
+  const deleteAccount = async() => {
+
+    try{
+      const token = window.localStorage.getItem("token");
+      if(!token){
+        throw new Error("Authentication token is missing");
+      }
+
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+
+      const userInfo = await validateResponse.json()
+
+      const response = await fetch(`http://localhost:8000/deleteUser?email=${userInfo.username}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if(!response.ok){
+        throw new Error(`Failed to delete account: ${response.statusText}`);
+      }
+
+      const responseIDM = await fetch("http://localhost:8080/deleteUser", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: userInfo.username
+        }),
+      });
+
+      if(!responseIDM.ok){
+        throw new Error(`Failed to delete IDM user: ${responseIDM.statusText}`);
+      }
+      
+      alert("Account deleted successfully!");
+      window.localStorage.removeItem("token");
+      router.push("/");
+
+    }catch (err: any) {
+      alert(err.message);
+    }
+  }
+
+
   const handleLogout = async () => {
     try {
       const token = window.localStorage.getItem("token");
@@ -174,7 +231,17 @@ const UserDashboard = () => {
           </div>
         )
       case "deleteAccount":
-        return <h1 className="text-2xl font-bold">Delete Account</h1>;
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b from-blue-100 to-indigo-100">
+              <p className="text-lg font-semibold mb-4">Are you sure you want to delete your account?</p>
+              <button
+                onClick={deleteAccount}
+                className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
+              >
+                Delete Account
+              </button>
+            </div>
+          );
       case "logout":
         return (
           <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b from-blue-100 to-indigo-100">
