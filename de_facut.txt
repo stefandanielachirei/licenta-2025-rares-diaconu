@@ -21,9 +21,7 @@ chestii pentru luni:
 	- paginile de change password, delete account cu cele 2 cereri spre backend si auth, log out
 	- de facut pagina de carti cu paginarea si cu poza(asta este diferit fata de admin) si cu posibilitatea de a o pune la read si to_read si cu review-urile la carti sumarizate si sa poata apasa pe carte sa il duca pe pagina cartii unde vor fi review-urile complete si cu sentiment analysis si cu similaritatea intre ele si posibiltatea de a apasa pentru a adauga review personal care duce pe alta pagina - aici se mai pot adauga/scoate chestii
 	- de facut paginile de read si to_read
-	- de incercat sa fac un json unde sa pun multe carti manual cu tot cu coperta si sa il folosesc pe ala in locul la cel pe care il folosesc acum(sa pun isbn si apoi 
-coperta de pe openlibrary)
-
+	- de modificat isbn-urile din books.csv ca sa fie cele bune de pe openlibrary pentru a adauga mai multe carti - facut
 idm_db:
     image: postgres:14
     container_name: idm_db

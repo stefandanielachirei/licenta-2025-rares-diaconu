@@ -54,7 +54,7 @@ def import_books():
         db.close()
         return
     
-    books_df = pd.read_csv("books.csv", dtype={'isbn': str}, nrows=20)
+    books_df = pd.read_csv("updated_books.csv", dtype={'isbn': str}, nrows=15)
 
     imported_books = 0
 
@@ -64,6 +64,7 @@ def import_books():
             continue
 
         image_url = fetch_cover_url(isbn)
+
         if not image_url:
             print(f"Skipping book with ISBN {isbn}: No cover found.")
             continue

@@ -7,3 +7,6 @@ nlp_model/.env
 goodreads_reviews_spoiler_raw.json
 books.csv
 test.py
+books_200.csv
+updated_books.csv
+backend/updated_books.csv
