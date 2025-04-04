@@ -30,7 +30,8 @@ const UserDashboard = () => {
   const [totalAllBooks, setTotalAllBooks] = useState(0);
   const [totalToReadBooks, setTotalToReadBooks] = useState(0);
   const [toReadBooks, setToReadBooks] = useState<BookType[]>([]);
-  const itemsPerPage = 2;
+  const itemsPerPageAllBooks = 2;
+  const itemsPerPageToReadBooks = 4;
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormDataChangePassword({ ...formDataChangePassword, [e.target.name]: e.target.value });
@@ -53,7 +54,7 @@ const UserDashboard = () => {
   
       const params = new URLSearchParams({
         page: pageAllBooks.toString(),
-        items_per_page: itemsPerPage.toString(),
+        items_per_page: itemsPerPageAllBooks.toString(),
       });
   
       if (title) params.append("title", title);
@@ -72,7 +73,7 @@ const UserDashboard = () => {
   
       const data = await response.json();
       setBooks(data.books);
-      setTotalToReadBooks(data.total_books);
+      setTotalAllBooks(data.total_books);
     } catch (error) {
       console.error(error);
     }
@@ -179,7 +180,7 @@ const UserDashboard = () => {
 
       const userInfo = await validateResponse.json();
 
-      const response = await fetch(`http://localhost:8000/to_read_books/${userInfo.username}?page=${pageToReadBooks}&per_page=${itemsPerPage}`, {
+      const response = await fetch(`http://localhost:8000/to_read_books/${userInfo.username}?page=${pageToReadBooks}&per_page=${itemsPerPageToReadBooks}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -415,9 +416,9 @@ const UserDashboard = () => {
               </button>
               <button
                 onClick={() =>
-                  setPageAllBooks((prev) => (prev * itemsPerPage < totalAllBooks ? prev + 1 : prev))
+                  setPageAllBooks((prev) => (prev * itemsPerPageAllBooks < totalAllBooks ? prev + 1 : prev))
                 }
-                disabled={pageAllBooks * itemsPerPage >= totalAllBooks}
+                disabled={pageAllBooks * itemsPerPageAllBooks >= totalAllBooks}
                 className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 Next
@@ -428,35 +429,45 @@ const UserDashboard = () => {
       case "to_read":
         return (
           <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {toReadBooks.map((book: any) => (
-                <div key={book.id} className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center">
-                  <img
-                    src={book.image_url || "https://via.placeholder.com/200x300"}
-                    alt={book.title}
-                    className="w-48 h-72 object-cover rounded-lg mb-4"
-                  />
-                  <h2 className="text-xl font-bold">{book.title}</h2>
-                  <p className="text-gray-600">Author: {book.author}</p>
-                  <p className="text-gray-600">ISBN: {book.isbn}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-between">
-              <button
-                onClick={() => setPageToReadBooks((prev) => Math.max(1, prev - 1))}
-                disabled={pageToReadBooks === 1}
-                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setPageToReadBooks((prev) => (prev * itemsPerPage < totalToReadBooks ? prev + 1 : prev))}
-                disabled={pageToReadBooks * itemsPerPage >= totalToReadBooks}
-                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-              >
-                Next
-              </button>
+            <div className="flex flex-col">
+              <div className="flex flex-wrap gap-6 justify-center">
+                {toReadBooks.map((book: any) => (
+                  <div
+                    key={book.id}
+                    className="flex bg-white p-6 rounded-lg shadow-md items-center w-full max-w-[600px] justify-between"
+                  >
+                    <img
+                      src={book.image_url || "https://via.placeholder.com/200x300"}
+                      alt={book.title}
+                      className="w-40 h-60 object-cover rounded-lg"
+                    />
+                    <div className="flex-1 ml-4">
+                      <h2 className="text-xl font-bold">{book.title}</h2>
+                      <p className="text-gray-600">Author: {book.author}</p>
+                      <p className="text-gray-600">ISBN: {book.isbn}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between p-4 mt-4">
+                <button
+                  onClick={() => setPageToReadBooks((prev) => Math.max(1, prev - 1))}
+                  disabled={pageToReadBooks === 1}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() =>
+                    setPageToReadBooks((prev) => (prev * itemsPerPageToReadBooks < totalToReadBooks ? prev + 1 : prev))
+                  }
+                  disabled={pageToReadBooks * itemsPerPageToReadBooks >= totalToReadBooks}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         )
