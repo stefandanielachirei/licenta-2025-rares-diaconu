@@ -13,7 +13,14 @@ const UserDashboard = () => {
     currentPassword: "",
     newPassword: "",
   });
+  const [books, setBooks] = useState([]);
   const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [isbn, setIsbn] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const itemsPerPage = 2;
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormDataChangePassword({ ...formDataChangePassword, [e.target.name]: e.target.value });
@@ -21,6 +28,51 @@ const UserDashboard = () => {
 
   const changePage = (page: string) => {
     setActivePage(page);
+  };
+
+  const fetchBooks = async () => {
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token is missing");
+      }
+  
+      const params = new URLSearchParams({
+        page: page.toString(),
+        items_per_page: itemsPerPage.toString(),
+      });
+  
+      if (title) params.append("title", title);
+      if (author) params.append("author", author);
+      if (isbn) params.append("isbn", isbn);
+  
+      const response = await fetch(`http://localhost:8000/books?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+  
+      if (!response.ok) throw new Error("Failed to fetch books");
+  
+      const data = await response.json();
+      setBooks(data.books);
+      setTotalBooks(data.total_books);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  
+
+  useEffect(() => {
+    fetchBooks();
+  }, [page]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchBooks();
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -169,7 +221,91 @@ const UserDashboard = () => {
   const renderContent = () => {
     switch (activePage) {
       case "all_books":
-            return <h1 className="text-2xl font-bold">Books</h1>;         
+        return (
+          <div>
+            <form onSubmit={handleSearch} className="mb-4 flex flex-wrap gap-2">
+              <input
+                type="text"
+                placeholder="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Author"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="ISBN"
+                value={isbn}
+                onChange={(e) => setIsbn(e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+              <button
+                type="submit"
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+              >
+                Search
+              </button>
+            </form>
+
+            <div className="flex flex-col gap-6">
+              {books.map((book: any) => (
+                <div
+                  key={book.id}
+                  className="flex bg-white p-6 rounded-lg shadow-md items-center w-full justify-between"
+                >
+                  <div className="flex items-center gap-6 w-full">
+                    <img
+                      src={book.image_url || "https://via.placeholder.com/150x200"}
+                      alt={book.title}
+                      className="w-32 h-48 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold">{book.title}</h2>
+                        <select
+                          value={book.status || "none"}
+                          onChange={(e) => handleStatusChange(book.id, e.target.value)}
+                          className="px-3 py-2 border rounded-lg bg-gray-100 text-sm"
+                        >
+                          <option value="none">Select</option>
+                          <option value="read">Read</option>
+                          <option value="to_read">To Read</option>
+                        </select>
+                      </div>
+                      <p className="text-gray-600">Author: {book.author}</p>
+                      <p className="text-gray-600">ISBN: {book.isbn}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex justify-between">
+              <button
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() =>
+                  setPage((prev) => (prev * itemsPerPage < totalBooks ? prev + 1 : prev))
+                }
+                disabled={page * itemsPerPage >= totalBooks}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )     
       case "to_read":
         return <h1 className="text-2xl font-bold">To Read Books</h1>;
       case "read":

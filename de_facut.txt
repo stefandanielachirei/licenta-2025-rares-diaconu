@@ -17,8 +17,8 @@ chestii pentru luni:
 		- a doua va fi cu review-uri tot cu paginarea ca la prima : get, delete - facut
 		- a treia va fi cu delete account cu cele 2 cereri spre backend si auth - facut
 		- a patra cu logout - facut
-	- sa se faca paginile de la user: carti, to_read, read, change_password, delete account cu cele 2 cereri spre backend si auth, log out
-	- paginile de change password, delete account cu cele 2 cereri spre backend si auth, log out
+	- sa se faca paginile de la user: carti, to_read, read, change_password, delete account cu cele 2 cereri spre backend si auth, log out - facut
+	- paginile de change password, delete account cu cele 2 cereri spre backend si auth, log out - facut
 	- de facut pagina de carti cu paginarea si cu poza(asta este diferit fata de admin) si cu posibilitatea de a o pune la read si to_read si cu review-urile la carti sumarizate si sa poata apasa pe carte sa il duca pe pagina cartii unde vor fi review-urile complete si cu sentiment analysis si cu similaritatea intre ele si posibiltatea de a apasa pentru a adauga review personal care duce pe alta pagina - aici se mai pot adauga/scoate chestii
 	- de facut paginile de read si to_read
 	- de modificat isbn-urile din books.csv ca sa fie cele bune de pe openlibrary pentru a adauga mai multe carti - facut

@@ -479,7 +479,7 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
                 <div className="flex items-center justify-center gap-4 mt-4">
-                  <button
+                <button
                     onClick={() => setCurrentPageUsers((prev) => Math.max(prev - 1, 1))}
                     className="border border-black px-6 py-2 rounded-lg flex items-center hover:bg-gray-200 transition"
                   >

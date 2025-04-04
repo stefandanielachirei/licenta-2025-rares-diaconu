@@ -9,6 +9,7 @@ from models import User, Book, Review
 from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate
 from middleware import TokenValidationMiddleware
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI(
     title="Web application similar with goodreads using natural language processing(NLP) and RESTFul APIs",
@@ -110,19 +111,29 @@ def get_book(request: Request, book_id: int, db: Session = Depends(get_db)):
     return sanitize_dict(book)
 
 @app.get("/books")
-def get_books(request: Request, 
+def get_books(title : Optional[str] = Query(None, alias="title"),
+              author : Optional[str] = Query(None, alias="author"),
+              isbn : Optional[str] = Query(None, alias="isbn"),
               page: int = 1,
               items_per_page : int = 10,
               db: Session = Depends(get_db)):
-    
-    validate_admin_role(request=request)
 
     if page < 1 or items_per_page <= 0:
         raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
     
-    total_books = db.query(Book).count()
+    query = db.query(Book)
+    if title:
+        query = query.filter(Book.title.ilike(f"%{title}%"))
+
+    if author:
+        query = query.filter(Book.author.ilike(f"%{author}%"))
+
+    if isbn:
+        query = query.filter(Book.isbn == isbn)
+    
+    total_books = query.count()
     skip = (page - 1) * items_per_page
-    books = db.query(Book).offset(skip).limit(items_per_page).all()
+    books = query.offset(skip).limit(items_per_page).all()
 
     if skip >= total_books and total_books > 0:
         raise HTTPException(status_code=416, detail="Page out of range")

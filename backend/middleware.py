@@ -12,14 +12,14 @@ class TokenValidationMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        
+        if scope["method"] == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
 
         request = Request(scope, receive)
 
         if scope["path"] == "/save-user" and request.method == "POST":
-            await self.app(scope, receive, send)
-            return
-
-        if request.method == "OPTIONS":
             await self.app(scope, receive, send)
             return
 
