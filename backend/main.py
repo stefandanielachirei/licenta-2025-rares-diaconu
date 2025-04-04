@@ -294,6 +294,8 @@ def get_reviews(db: Session = Depends(get_db)):
 
 @app.post("/update_status")
 def update_status(data: StatusUpdate, db: Session = Depends(get_db)):
+
+    validate_user_role(request=Request)
     
     book = db.query(Book).filter(Book.id == data.book_id).first()
     if not book:
@@ -325,3 +327,17 @@ def update_status(data: StatusUpdate, db: Session = Depends(get_db)):
     }
 
     return JSONResponse(status_code=201, content=response_data)
+
+@app.get("/to_read_books/{user_email}")
+def get_to_read_books(request: Request, user_email: str, db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
+
+    books = (
+        db.query(Book)
+        .join(UserBook, Book.id == UserBook.book_id)
+        .filter(UserBook.user_email == user_email, UserBook.status == "to_read")
+        .all()
+    )
+
+    return [sanitize_dict(book) for book in books]

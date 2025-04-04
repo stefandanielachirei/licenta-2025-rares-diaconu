@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import "./styles.css";
 
 const UserDashboard = () => {
+  type BookType = {
+      id: number;
+      title: string;
+      author: string;
+      isbn: string;
+      image_url: string;
+    };
   const [activePage, setActivePage] = useState("all_books");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +27,7 @@ const UserDashboard = () => {
   const [isbn, setIsbn] = useState("");
   const [page, setPage] = useState(1);
   const [totalBooks, setTotalBooks] = useState(0);
+  const [toReadBooks, setToReadBooks] = useState<BookType[]>([]);
   const itemsPerPage = 2;
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,8 +118,6 @@ const UserDashboard = () => {
       console.error("Error updating status:", error);
     }
   };
-  
-  
 
   useEffect(() => {
     fetchBooks();
@@ -121,6 +127,42 @@ const UserDashboard = () => {
     e.preventDefault();
     setPage(1);
     fetchBooks();
+  };
+
+  useEffect(() => {
+    fetchToReadBooks();
+  }, []);
+
+  const fetchToReadBooks = async () => {
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token is missing.");
+      }
+
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+
+      const userInfo = await validateResponse.json();
+
+      const response = await fetch(`http://localhost:8000/to_read_books/${userInfo.username}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch To Read books");
+
+      const data = await response.json();
+      setToReadBooks(data);
+    } catch (error) {
+      console.error("Error fetching To Read books:", error);
+    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -355,7 +397,26 @@ const UserDashboard = () => {
           </div>
         )     
       case "to_read":
-        return <h1 className="text-2xl font-bold">To Read Books</h1>;
+        return (
+          <div>
+            <h1 className="text-2xl font-bold mb-4">To Read Books</h1>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {toReadBooks.map((book: any) => (
+                <div key={book.id} className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center">
+                  <img
+                    src={book.image_url || "https://via.placeholder.com/200x300"}
+                    alt={book.title}
+                    className="w-48 h-72 object-cover rounded-lg mb-4"
+                  />
+                  <h2 className="text-xl font-bold">{book.title}</h2>
+                  <p className="text-gray-600">Author: {book.author}</p>
+                  <p className="text-gray-600">ISBN: {book.isbn}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       case "read":
         return <h1 className="text-2xl font-bold">Read Books</h1>;
       case "changePassword":
