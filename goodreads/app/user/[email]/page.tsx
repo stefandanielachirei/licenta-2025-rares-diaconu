@@ -63,6 +63,54 @@ const UserDashboard = () => {
       console.error(error);
     }
   };
+
+  const handleStatusChange = async (bookId: number, newStatus: string) => {
+    try {
+
+      const token = window.localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token is missing.");
+      }
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+
+      const userInfo = await validateResponse.json();
+      const response = await fetch("http://localhost:8000/update_status", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json" ,
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_email: userInfo.username,
+          book_id: bookId,
+          status: newStatus,
+        }),
+      });
+  
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Error updating status");
+  
+      console.log("Status updated:", data.message);
+
+      setBooks((prevBooks : any) =>
+        prevBooks.map((book : any) =>
+          book.id === bookId ? { ...book, status: newStatus } : book
+        )
+      );
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+  
   
 
   useEffect(() => {

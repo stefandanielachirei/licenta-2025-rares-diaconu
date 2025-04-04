@@ -5,8 +5,8 @@ from database import get_db, engine
 import models
 import requests
 from fastapi.responses import JSONResponse
-from models import User, Book, Review
-from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate
+from models import User, Book, Review, UserBook
+from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate
 from middleware import TokenValidationMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -291,3 +291,37 @@ def get_books(db: Session = Depends(get_db)):
 def get_reviews(db: Session = Depends(get_db)):
     reviews = db.query(Review).limit(10).all()
     return reviews
+
+@app.post("/update_status")
+def update_status(data: StatusUpdate, db: Session = Depends(get_db)):
+    
+    book = db.query(Book).filter(Book.id == data.book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    user_book = db.query(UserBook).filter(
+        UserBook.user_email == data.user_email,
+        UserBook.book_id == data.book_id
+    ).first()
+
+    if user_book:
+        if data.status == "none":
+            db.delete(user_book)
+        else:
+            user_book.status = data.status
+    
+    else:
+        if data.status != "none":
+            new_user_book = UserBook(
+                user_email=data.user_email,
+                book_id=data.book_id,
+                status=data.status
+            )
+            db.add(new_user_book)
+
+    db.commit()
+    response_data = {
+        "message": "Status updated successfully"
+    }
+
+    return JSONResponse(status_code=201, content=response_data)

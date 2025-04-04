@@ -27,3 +27,8 @@ class BookUpdate(BaseModel):
     isbn: Optional[str] = None
     goodreads_id: Optional[str] = None
     image_url: Optional[str] = None
+
+class StatusUpdate(BaseModel):
+    user_email: str
+    book_id: int
+    status: str
