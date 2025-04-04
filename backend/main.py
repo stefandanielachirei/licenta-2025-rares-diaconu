@@ -111,7 +111,8 @@ def get_book(request: Request, book_id: int, db: Session = Depends(get_db)):
     return sanitize_dict(book)
 
 @app.get("/books")
-def get_books(title : Optional[str] = Query(None, alias="title"),
+def get_books(user_email: str = Query(..., alias="user_email"),
+              title : Optional[str] = Query(None, alias="title"),
               author : Optional[str] = Query(None, alias="author"),
               isbn : Optional[str] = Query(None, alias="isbn"),
               page: int = 1,
@@ -121,7 +122,10 @@ def get_books(title : Optional[str] = Query(None, alias="title"),
     if page < 1 or items_per_page <= 0:
         raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
     
-    query = db.query(Book)
+    query = db.query(Book, UserBook.status).outerjoin(
+        UserBook, (UserBook.book_id == Book.id) & (UserBook.user_email == user_email)
+    )
+
     if title:
         query = query.filter(Book.title.ilike(f"%{title}%"))
 
@@ -141,7 +145,17 @@ def get_books(title : Optional[str] = Query(None, alias="title"),
     return {
         "total_books": total_books,
         "page_number" : page,
-        "books": [sanitize_dict(book) for book in books]
+        "books": [
+            {
+                "id": book.id,
+                "title": book.title,
+                "author": book.author,
+                "isbn": book.isbn,
+                "image_url": book.image_url,
+                "status": status if status else "none"
+            }
+            for book, status in books
+        ],
     }
 
 @app.put("/books/{book_id}")

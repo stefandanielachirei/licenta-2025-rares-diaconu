@@ -51,8 +51,20 @@ const UserDashboard = () => {
       if (!token) {
         throw new Error("Authentication token is missing");
       }
+
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+      const userInfo = await validateResponse.json();
   
       const params = new URLSearchParams({
+        user_email: userInfo.username,
         page: pageAllBooks.toString(),
         items_per_page: itemsPerPageAllBooks.toString(),
       });
@@ -386,18 +398,18 @@ const UserDashboard = () => {
                       className="w-32 h-48 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-bold">{book.title}</h2>
-                        <select
-                          value={book.status || "none"}
-                          onChange={(e) => handleStatusChange(book.id, e.target.value)}
-                          className="px-3 py-2 border rounded-lg bg-gray-100 text-sm"
-                        >
-                          <option value="none">Select</option>
-                          <option value="read">Read</option>
-                          <option value="to_read">To Read</option>
-                        </select>
-                      </div>
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-xl font-bold">{book.title}</h2>
+                      <select
+                        value={book.status}
+                        onChange={(e) => handleStatusChange(book.id, e.target.value)}
+                        className="px-3 py-2 border rounded-lg bg-gray-100 text-sm"
+                      >
+                        <option value="none">None</option>
+                        <option value="read">Read</option>
+                        <option value="to_read">To Read</option>
+                      </select>
+                    </div>
                       <p className="text-gray-600">Author: {book.author}</p>
                       <p className="text-gray-600">ISBN: {book.isbn}</p>
                     </div>
