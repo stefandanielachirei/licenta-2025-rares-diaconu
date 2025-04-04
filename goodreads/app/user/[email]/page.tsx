@@ -25,8 +25,10 @@ const UserDashboard = () => {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [isbn, setIsbn] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalBooks, setTotalBooks] = useState(0);
+  const [pageAllBooks, setPageAllBooks] = useState(1);
+  const [pageToReadBooks, setPageToReadBooks] = useState(1);
+  const [totalAllBooks, setTotalAllBooks] = useState(0);
+  const [totalToReadBooks, setTotalToReadBooks] = useState(0);
   const [toReadBooks, setToReadBooks] = useState<BookType[]>([]);
   const itemsPerPage = 2;
 
@@ -38,6 +40,10 @@ const UserDashboard = () => {
     setActivePage(page);
   };
 
+  useEffect(() => {
+    localStorage.setItem("activePage", activePage);
+  }, [activePage]);
+
   const fetchBooks = async () => {
     try {
       const token = window.localStorage.getItem("token");
@@ -46,7 +52,7 @@ const UserDashboard = () => {
       }
   
       const params = new URLSearchParams({
-        page: page.toString(),
+        page: pageAllBooks.toString(),
         items_per_page: itemsPerPage.toString(),
       });
   
@@ -66,7 +72,7 @@ const UserDashboard = () => {
   
       const data = await response.json();
       setBooks(data.books);
-      setTotalBooks(data.total_books);
+      setTotalToReadBooks(data.total_books);
     } catch (error) {
       console.error(error);
     }
@@ -119,19 +125,41 @@ const UserDashboard = () => {
     }
   };
 
+  const getActivePageFromQuery = () => {
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get("activePage") || localStorage.getItem("activePage") || "books";
+      }
+      return "books";
+    };
+  
+    useEffect(() => {
+      const page = getActivePageFromQuery();
+      if (!page) {
+        setActivePage("all_books");
+        localStorage.setItem("activePage", "all_books");
+      } else {
+        setActivePage(page);
+      }
+    }, []);
+
   useEffect(() => {
-    fetchBooks();
-  }, [page]);
+    if(activePage == "all_books"){
+      fetchBooks();
+    }
+  }, [activePage, pageAllBooks]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
+    setPageAllBooks(1);
     fetchBooks();
   };
 
   useEffect(() => {
-    fetchToReadBooks();
-  }, []);
+    if(activePage == "to_read"){
+      fetchToReadBooks();
+    } 
+  }, [activePage, pageToReadBooks]);
 
   const fetchToReadBooks = async () => {
     try {
@@ -151,7 +179,7 @@ const UserDashboard = () => {
 
       const userInfo = await validateResponse.json();
 
-      const response = await fetch(`http://localhost:8000/to_read_books/${userInfo.username}`, {
+      const response = await fetch(`http://localhost:8000/to_read_books/${userInfo.username}?page=${pageToReadBooks}&per_page=${itemsPerPage}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -159,7 +187,8 @@ const UserDashboard = () => {
       if (!response.ok) throw new Error("Failed to fetch To Read books");
 
       const data = await response.json();
-      setToReadBooks(data);
+      setToReadBooks(data.books);
+      setTotalToReadBooks(data.total_books);
     } catch (error) {
       console.error("Error fetching To Read books:", error);
     }
@@ -378,17 +407,17 @@ const UserDashboard = () => {
 
             <div className="mt-4 flex justify-between">
               <button
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={page === 1}
+                onClick={() => setPageAllBooks((prev) => Math.max(1, prev - 1))}
+                disabled={pageAllBooks === 1}
                 className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 Prev
               </button>
               <button
                 onClick={() =>
-                  setPage((prev) => (prev * itemsPerPage < totalBooks ? prev + 1 : prev))
+                  setPageAllBooks((prev) => (prev * itemsPerPage < totalAllBooks ? prev + 1 : prev))
                 }
-                disabled={page * itemsPerPage >= totalBooks}
+                disabled={pageAllBooks * itemsPerPage >= totalAllBooks}
                 className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 Next
@@ -399,8 +428,6 @@ const UserDashboard = () => {
       case "to_read":
         return (
           <div>
-            <h1 className="text-2xl font-bold mb-4">To Read Books</h1>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {toReadBooks.map((book: any) => (
                 <div key={book.id} className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center">
@@ -414,6 +441,22 @@ const UserDashboard = () => {
                   <p className="text-gray-600">ISBN: {book.isbn}</p>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 flex justify-between">
+              <button
+                onClick={() => setPageToReadBooks((prev) => Math.max(1, prev - 1))}
+                disabled={pageToReadBooks === 1}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setPageToReadBooks((prev) => (prev * itemsPerPage < totalToReadBooks ? prev + 1 : prev))}
+                disabled={pageToReadBooks * itemsPerPage >= totalToReadBooks}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         )
@@ -513,7 +556,7 @@ const UserDashboard = () => {
             <li
               onClick={() => setActivePage("all_books")}
               className={`px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-                activePage === "books" ? "bg-purple-200 text-purple-700" : "hover:bg-purple-200 hover:text-purple-700"
+                activePage === "all_books" ? "bg-purple-200 text-purple-700" : "hover:bg-purple-200 hover:text-purple-700"
               }`}
             >
               All Books
