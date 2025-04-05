@@ -534,18 +534,24 @@ const UserDashboard = () => {
                 {ReadBooks.map((book: any) => (
                   <div
                     key={book.id}
-                    className="flex bg-white p-6 rounded-lg shadow-md items-center w-full max-w-[600px] justify-between"
+                    className="flex flex-col bg-white p-6 rounded-lg shadow-md items-center w-full max-w-[400px]"
                   >
                     <img
                       src={book.image_url || "https://via.placeholder.com/200x300"}
                       alt={book.title}
-                      className="w-40 h-60 object-cover rounded-lg"
+                      className="w-40 h-60 object-cover rounded-lg mb-4"
                     />
-                    <div className="flex-1 ml-4">
+                    <div className="text-center mb-4">
                       <h2 className="text-xl font-bold">{book.title}</h2>
                       <p className="text-gray-600">Author: {book.author}</p>
                       <p className="text-gray-600">ISBN: {book.isbn}</p>
                     </div>
+                    <button
+                      onClick={() => router.push(`user/add-review/${book.id}`)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+                    >
+                      Add Review
+                    </button>
                   </div>
                 ))}
               </div>
@@ -560,7 +566,9 @@ const UserDashboard = () => {
                 </button>
                 <button
                   onClick={() =>
-                    setPageReadBooks((prev) => (prev * itemsPerPageReadBooks < totalReadBooks ? prev + 1 : prev))
+                    setPageReadBooks((prev) =>
+                      prev * itemsPerPageReadBooks < totalReadBooks ? prev + 1 : prev
+                    )
                   }
                   disabled={pageReadBooks * itemsPerPageReadBooks >= totalReadBooks}
                   className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
