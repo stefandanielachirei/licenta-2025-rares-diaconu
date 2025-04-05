@@ -6,7 +6,7 @@ import models
 import requests
 from fastapi.responses import JSONResponse
 from models import User, Book, Review, UserBook
-from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate, ReviewCreate
+from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate, ReviewCreate, ReviewDelete
 from middleware import TokenValidationMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -451,30 +451,32 @@ def update_review(request: Request, review: ReviewCreate, db: Session = Depends(
     return JSONResponse(status_code=200, content=response_data)
 
 @app.delete("/delete_review")
-def delete_review(request: Request, book_id: int, user_email: str, db: Session = Depends(get_db)):
+def delete_review(request: Request, review: ReviewDelete, db: Session = Depends(get_db)):
     
     validate_user_role(request=request)
 
-    review = db.query(Review).filter(
-        Review.book_id == book_id,
-        Review.user_email == user_email
+    review_to_delete = db.query(Review).filter(
+        Review.book_id == review.book_id,
+        Review.user_email == review.user_email
     ).first()
 
-    if not review:
+    if not review_to_delete:
         raise HTTPException(status_code=404, detail="Review not found")
     
-    db.delete(review)
+    db.delete(review_to_delete)
     db.commit()
 
     response_data = {
         "message": "Review deleted successfully",
-        "review_id": review.id
+        "review_id": review_to_delete.id
     }
 
     return JSONResponse(status_code=200, content=response_data)
                   
 @app.get("/reviews")
-def get_reviews_by_user(email: str = Query(...), db: Session = Depends(get_db)):
+def get_reviews_by_user(request: Request, email: str = Query(...), db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
     reviews = db.query(Review).filter(Review.user_email == email).all()
 
     if not reviews:

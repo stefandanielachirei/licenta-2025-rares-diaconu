@@ -38,3 +38,7 @@ class ReviewCreate(BaseModel):
     user_email: str
     summary: Optional[str] = None
     review_text: str
+
+class ReviewDelete(BaseModel):
+    book_id: int
+    user_email: str

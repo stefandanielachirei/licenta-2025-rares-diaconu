@@ -325,7 +325,7 @@ const UserDashboard = () => {
         throw new Error("Token validation failed");
       }
 
-      const userInfo = await validateResponse.json()
+      const userInfo = await validateResponse.json();
 
       const response = await fetch(`http://localhost:8000/deleteUser?email=${userInfo.username}`, {
         method: "DELETE",

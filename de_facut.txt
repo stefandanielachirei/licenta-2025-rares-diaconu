@@ -24,9 +24,9 @@ chestii pentru luni:
 	- cand apasa pe coperta sau titlu sa se duca pe pagina cartii unde vor fi toate review-urile paginate si in stanga va fi sentiment analysis la fiecare review si
 similaritatea cumva sa fie folosita la final intre review-uri
 	- cu review-urile la carti sumarizate si sa poata apasa pe carte sa il duca pe pagina cartii unde vor fi review-urile complete si cu sentiment analysis si cu similaritatea intre ele si posibiltatea de a apasa pentru a adauga review personal care duce pe alta pagina - aici se mai pot adauga/scoate chestii
-	- de facut pagina de read care contine si un buton add review catre o alta pagina unde se adauga review-ul
+	- review-ul propriu sa fie primul pe pagina principala si a cartii la review-uri si rezumate
+	- de facut pagina de read care contine si un buton add review catre o alta pagina unde se adauga review-ul - facut
 	- de facut pagina de to_read - facut
-	- cand da add review din pagina read, review-ul propriu sa fie primul pe pagina principala si a cartii
 	- de modificat isbn-urile din books.csv ca sa fie cele bune de pe openlibrary pentru a adauga mai multe carti - facut
 idm_db:
     image: postgres:14

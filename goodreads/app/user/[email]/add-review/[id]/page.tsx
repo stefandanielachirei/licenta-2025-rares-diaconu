@@ -67,7 +67,9 @@ export default function AddReviewPage() {
       setSuccessMessage(`${data.message}`);
       setFormData({ summary: "", review_text: "" });
 
-      router.push(`/user/${userInfo.username}`);
+      setTimeout(() => {
+        router.push(`/user/${userInfo.username}`);
+      }, 2000);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -79,6 +81,9 @@ export default function AddReviewPage() {
     <div className="min-h-screen w-screen bg-gradient-to-b from-blue-100 to-indigo-100 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-10 w-[500px]">
             <h2 className="text-indigo-700 text-center text-3xl font-bold mb-8">Add Review</h2>
+            {successMessage && (
+                <p className="text-green-600 text-center mb-4 font-medium">{successMessage}</p>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
             <div>
                 <label className="block text-base font-medium text-gray-700 mb-1">Review Text</label>
