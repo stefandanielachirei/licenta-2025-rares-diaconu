@@ -32,3 +32,9 @@ class StatusUpdate(BaseModel):
     user_email: str
     book_id: int
     status: str
+
+class ReviewCreate(BaseModel):
+    book_id: int
+    user_email: str
+    summary: Optional[str] = None
+    review_text: str

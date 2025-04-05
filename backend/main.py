@@ -6,7 +6,7 @@ import models
 import requests
 from fastapi.responses import JSONResponse
 from models import User, Book, Review, UserBook
-from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate
+from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate, ReviewCreate
 from middleware import TokenValidationMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -388,3 +388,88 @@ def get_read_books(request: Request, user_email: str, page: int = 1, items_per_p
 
     return {"books": [sanitize_dict(book) for book in books], "total_books": total_books}
 
+@app.post("/add_review")
+def add_review(request: Request, review:ReviewCreate , db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
+
+    book = db.query(Book).filter(Book.id == review.book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    user = db.query(User).filter(User.email == review.user_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    existing_review = db.query(Review).filter(
+        Review.book_id == review.book_id,
+        Review.user_email == review.user_email
+    ).first()
+
+    if existing_review:
+        raise HTTPException(status_code=409, detail="You have already reviewed this book, please update your existing review")
+    
+    new_review = Review(
+        book_id=review.book_id,
+        user_email=review.user_email,
+        summary = review.summary,
+        review_text = review.review_text
+    )
+
+    db.add(new_review)
+    db.commit()
+    db.refresh(new_review)
+
+    response_data = {
+        "message": "Review added successfully", 
+        "review_id": new_review.id
+    }
+
+    return JSONResponse(status_code=201, content=response_data)
+
+@app.put("/update_review")
+def update_review(request: Request, review: ReviewCreate, db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
+
+    existing_review = db.query(Review).filter(
+        Review.book_id == review.book_id,
+        Review.user_email == review.user_email
+    ).first()
+
+    if not existing_review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    existing_review.review_text = review.review_text
+    db.commit()
+
+    response_data = {
+        "message": "Review updated successfully",
+        "review_id": existing_review.id
+    }
+
+    return JSONResponse(status_code=200, content=response_data)
+
+@app.delete("/delete_review")
+def delete_review(request: Request, book_id: int, user_email: str, db: Session = Depends(get_db)):
+    
+    validate_user_role(request=request)
+
+    review = db.query(Review).filter(
+        Review.book_id == book_id,
+        Review.user_email == user_email
+    ).first()
+
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    db.delete(review)
+    db.commit()
+
+    response_data = {
+        "message": "Review deleted successfully",
+        "review_id": review.id
+    }
+
+    return JSONResponse(status_code=200, content=response_data)
+                  
