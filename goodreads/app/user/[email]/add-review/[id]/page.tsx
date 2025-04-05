@@ -10,6 +10,7 @@ export default function AddReviewPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
   const params = useParams();
   const bookId = params.id;
@@ -57,10 +58,14 @@ export default function AddReviewPage() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.detail || "Failed to add review");
       }
+
+      setSuccessMessage(`${data.message}`);
+      setFormData({ summary: "", review_text: "" });
 
       router.push(`/user/${userInfo.username}`);
     } catch (err: any) {

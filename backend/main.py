@@ -473,3 +473,11 @@ def delete_review(request: Request, book_id: int, user_email: str, db: Session =
 
     return JSONResponse(status_code=200, content=response_data)
                   
+@app.get("/reviews")
+def get_reviews_by_user(email: str = Query(...), db: Session = Depends(get_db)):
+    reviews = db.query(Review).filter(Review.user_email == email).all()
+
+    if not reviews:
+        raise HTTPException(status_code=404, detail="No reviews found for this user")
+
+    return reviews
