@@ -365,3 +365,26 @@ def get_to_read_books(request: Request, user_email: str, page: int = 1, items_pe
 
     return {"books": [sanitize_dict(book) for book in books], "total_books": total_books}
 
+@app.get("/read_books/{user_email}")
+def get_read_books(request: Request, user_email: str, page: int = 1, items_per_page: int = 4, db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
+
+    if page < 1 or items_per_page <= 0:
+        raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
+    
+    books_query = (
+        db.query(Book)
+        .join(UserBook, Book.id == UserBook.book_id)
+        .filter(UserBook.user_email == user_email, UserBook.status == "read")
+    )
+
+    total_books = books_query.count()
+    skip = (page - 1) * items_per_page
+    books = books_query.offset(skip).limit(items_per_page).all()
+
+    if skip >= total_books and total_books > 0:
+        raise HTTPException(status_code=416, detail="Page out of range")
+
+    return {"books": [sanitize_dict(book) for book in books], "total_books": total_books}
+

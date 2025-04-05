@@ -27,11 +27,15 @@ const UserDashboard = () => {
   const [isbn, setIsbn] = useState("");
   const [pageAllBooks, setPageAllBooks] = useState(1);
   const [pageToReadBooks, setPageToReadBooks] = useState(1);
+  const [pageReadBooks, setPageReadBooks] = useState(1);
   const [totalAllBooks, setTotalAllBooks] = useState(0);
   const [totalToReadBooks, setTotalToReadBooks] = useState(0);
+  const [totalReadBooks, setTotalReadBooks] = useState(0);
   const [toReadBooks, setToReadBooks] = useState<BookType[]>([]);
+  const [ReadBooks, setReadBooks] = useState<BookType[]>([]);
   const itemsPerPageAllBooks = 2;
   const itemsPerPageToReadBooks = 4;
+  const itemsPerPageReadBooks = 4;
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormDataChangePassword({ ...formDataChangePassword, [e.target.name]: e.target.value });
@@ -204,6 +208,45 @@ const UserDashboard = () => {
       setTotalToReadBooks(data.total_books);
     } catch (error) {
       console.error("Error fetching To Read books:", error);
+    }
+  };
+
+  useEffect(() => {
+    if(activePage == "to_read"){
+      fetchReadBooks();
+    } 
+  }, [activePage, pageToReadBooks]);
+
+  const fetchReadBooks = async () => {
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token is missing.");
+      }
+
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+
+      const userInfo = await validateResponse.json();
+
+      const response = await fetch(`http://localhost:8000/read_books/${userInfo.username}?page=${pageReadBooks}&per_page=${itemsPerPageReadBooks}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch Read books");
+
+      const data = await response.json();
+      setReadBooks(data.books);
+      setTotalReadBooks(data.total_books);
+    } catch (error) {
+      console.error("Error fetching Read books:", error);
     }
   };
 
@@ -484,7 +527,50 @@ const UserDashboard = () => {
           </div>
         )
       case "read":
-        return <h1 className="text-2xl font-bold">Read Books</h1>;
+        return (
+          <div>
+            <div className="flex flex-col">
+              <div className="flex flex-wrap gap-6 justify-center">
+                {ReadBooks.map((book: any) => (
+                  <div
+                    key={book.id}
+                    className="flex bg-white p-6 rounded-lg shadow-md items-center w-full max-w-[600px] justify-between"
+                  >
+                    <img
+                      src={book.image_url || "https://via.placeholder.com/200x300"}
+                      alt={book.title}
+                      className="w-40 h-60 object-cover rounded-lg"
+                    />
+                    <div className="flex-1 ml-4">
+                      <h2 className="text-xl font-bold">{book.title}</h2>
+                      <p className="text-gray-600">Author: {book.author}</p>
+                      <p className="text-gray-600">ISBN: {book.isbn}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between p-4 mt-4">
+                <button
+                  onClick={() => setPageReadBooks((prev) => Math.max(1, prev - 1))}
+                  disabled={pageReadBooks === 1}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() =>
+                    setPageReadBooks((prev) => (prev * itemsPerPageReadBooks < totalReadBooks ? prev + 1 : prev))
+                  }
+                  disabled={pageReadBooks * itemsPerPageReadBooks >= totalReadBooks}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )
       case "changePassword":
         return (
             <div className="flex items-center justify-center h-full p-8">
