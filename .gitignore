@@ -2,8 +2,8 @@ Auth/env
 Auth/.env
 backend/venv/
 db_data/
-nlp_model/env
-nlp_model/.env
+server_gpus/env
+server_gpus/.env
 goodreads_reviews_spoiler_raw.json
 books.csv
 test.py
