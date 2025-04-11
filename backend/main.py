@@ -30,6 +30,7 @@ app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
 
 SERVER_URL = "http://192.168.251.219:8000/analyze-sentiment"
+SUMMARIZATION_SERVER_URL = "http://192.168.251.219:8000/summarize_reviews"
 
 class ReviewRequest(BaseModel):
     review: str
@@ -109,6 +110,30 @@ def get_book(request: Request, book_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Book not found")
     
     return sanitize_dict(book)
+
+@app.get("/books_admin")
+def get_books(request: Request, 
+              page: int = 1,
+              items_per_page : int = 10,
+              db: Session = Depends(get_db)):
+    
+    validate_admin_role(request=request)
+
+    if page < 1 or items_per_page <= 0:
+        raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
+    
+    total_books = db.query(Book).count()
+    skip = (page - 1) * items_per_page
+    books = db.query(Book).offset(skip).limit(items_per_page).all()
+
+    if skip >= total_books and total_books > 0:
+        raise HTTPException(status_code=416, detail="Page out of range")
+
+    return {
+        "total_books": total_books,
+        "page_number" : page,
+        "books": [sanitize_dict(book) for book in books]
+    }
 
 @app.get("/books")
 def get_books(user_email: str = Query(..., alias="user_email"),
@@ -483,3 +508,57 @@ def get_reviews_by_user(request: Request, email: str = Query(...), db: Session =
         raise HTTPException(status_code=404, detail="No reviews found for this user")
 
     return reviews
+
+@app.get("/books/{book_id}/summaries_live")
+def live_summaries_for_book(
+    request : Request,
+    book_id: int,
+    page: int = 1, 
+    items_per_page: int = 4,
+    db: Session = Depends(get_db)
+):
+    
+    validate_user_role(request=request)
+
+    if page < 1 or items_per_page <= 0:
+        raise HTTPException(status_code=422, detail="Page must be >= 1 and items_per_page > 0")
+
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    reviews_query = db.query(Review).filter(Review.book_id == book_id)
+    total = reviews_query.count()
+    skip = (page - 1) * items_per_page
+    reviews = reviews_query.offset(skip).limit(items_per_page).all()
+
+    texts = [r.review_text for r in reviews]
+
+    payload = {
+        "texts": texts,
+        "max_tokens_threshold": 40
+    }
+
+    try:
+        response = requests.post(SUMMARIZATION_SERVER_URL, json=payload, timeout=60)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Summarization error: {e}")
+
+    summaries = response.json()["summaries"]
+
+    return {
+        "total": total,
+        "page": page,
+        "items_per_page": items_per_page,
+        "summaries": [
+            {
+                "review_id": r.id,
+                "original": s["original"],
+                "summary": s["summary"],
+                "method": s["method"]
+            }
+            for r, s in zip(reviews, summaries)
+        ]
+    }
+

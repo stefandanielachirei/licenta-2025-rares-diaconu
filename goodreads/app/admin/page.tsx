@@ -63,7 +63,7 @@ const AdminDashboard = () => {
         if(!token){
             throw new Error("Authentication token is missing");
         }
-        const response = await fetch(`http://localhost:8000/books?page=${currentPageBooks}&items_per_page=${itemsPerPageBooks}`, {
+        const response = await fetch(`http://localhost:8000/books_admin?page=${currentPageBooks}&items_per_page=${itemsPerPageBooks}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -273,6 +273,8 @@ const AdminDashboard = () => {
       alert(data.message || "Successfully logged out.");
 
       window.localStorage.removeItem("token");
+      window.localStorage.removeItem("activePage");
+      setActivePage("books");
       router.push(`/`);
 
     }catch (err: any) {
