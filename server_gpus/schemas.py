@@ -7,3 +7,6 @@ class ReviewInput(BaseModel):
     
 class SentimentRequest(BaseModel):
     texts: list[str]
+    
+class TextsRequest(BaseModel):
+    texts: list[str]

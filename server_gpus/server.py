@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
-from schemas import ReviewInput, SentimentRequest
+from sentence_transformers import SentenceTransformer
+from schemas import ReviewInput, SentimentRequest, TextsRequest
+from sklearn.metrics.pairwise import cosine_similarity
 from fastapi.responses import JSONResponse
 import torch
 import os
+import numpy as np
 
 app = FastAPI()
 
@@ -127,6 +130,31 @@ def analyze_sentiment(payload: SentimentRequest):
     return JSONResponse(
         status_code=201,
         content={"sentiments": response}
+    )
+    
+similarity_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+@app.post("/most-dissimilar")
+def most_dissimilar_reviews(request: TextsRequest):
+    texts = request.texts
+
+    if len(texts) < 5:
+        raise HTTPException(status_code=400, detail="Need at least 5 reviews")
+
+    embeddings = similarity_model.encode(texts)
+
+    sim_matrix = cosine_similarity(embeddings)
+
+    dissim_matrix = 1 - sim_matrix
+    np.fill_diagonal(dissim_matrix, 0)
+
+    scores = dissim_matrix.mean(axis=1)
+
+    top_indices = np.argsort(scores)[-5:][::-1]
+
+    return JSONResponse(
+        status_code=201,
+        content={"indices": top_indices.tolist()}
     )
 
 # Rulează serverul: uvicorn server:app --host 0.0.0.0 --port 8000
