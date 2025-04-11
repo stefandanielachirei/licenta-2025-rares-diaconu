@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
-from schemas import ReviewRequest, ReviewInput
+from schemas import ReviewInput, SentimentRequest
 from fastapi.responses import JSONResponse
 import torch
 import os
@@ -54,6 +54,22 @@ def llama_summarize(text: str) -> str:
     summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return summary.replace(prompt, "").strip()
 
+def label_from_score(label, score):
+    if label == "POSITIVE":
+        if score > 0.9:
+            return "very_positive"
+        elif score > 0.7:
+            return "positive"
+        else:
+            return "neutral"
+    else:
+        if score > 0.9:
+            return "very_negative"
+        elif score > 0.7:
+            return "negative"
+        else:
+            return "neutral"
+
 long_summary_pipeline = pipeline("summarization", model="facebook/bart-large-cnn", device=device)
 
 @app.post("/summarize_reviews")
@@ -90,8 +106,27 @@ sentiment_pipeline = pipeline(
 )
 
 @app.post("/analyze-sentiment")
-async def analyze_sentiment(request: ReviewRequest):
-    result = sentiment_pipeline(request.review)
-    return {"label": result[0]["label"], "score": result[0]["score"]}
+def analyze_sentiment(payload: SentimentRequest):
+    try:
+        results = sentiment_pipeline(payload.texts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model error: {e}")
+
+    response = []
+    for text, result in zip(payload.texts, results):
+        label = result["label"]
+        score = result["score"]
+        fine_label = label_from_score(label, score)
+        response.append({
+            "text": text,
+            "label": label,
+            "score": score,
+            "fine_label": fine_label
+        })
+
+    return JSONResponse(
+        status_code=201,
+        content={"sentiments": response}
+    )
 
 # Rulează serverul: uvicorn server:app --host 0.0.0.0 --port 8000

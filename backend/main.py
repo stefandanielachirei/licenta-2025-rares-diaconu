@@ -646,7 +646,8 @@ def reviews_sentiment_analysis(
                 "review_id": r.id,
                 "text": s["text"],
                 "label": s["label"],
-                "score": round(s["score"], 4)
+                "score": round(s["score"], 4),
+                "fine_label": s["fine_label"]
             }
             for r, s in zip(reviews, sentiments)
         ]
