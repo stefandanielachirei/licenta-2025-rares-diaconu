@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import "./styles.css";
 
 const UserDashboard = () => {
@@ -36,6 +37,7 @@ const UserDashboard = () => {
   const itemsPerPageAllBooks = 2;
   const itemsPerPageToReadBooks = 4;
   const itemsPerPageReadBooks = 4;
+  var email = "";
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormDataChangePassword({ ...formDataChangePassword, [e.target.name]: e.target.value });
@@ -326,6 +328,7 @@ const UserDashboard = () => {
       }
 
       const userInfo = await validateResponse.json();
+      email = userInfo.username;
 
       const response = await fetch(`http://localhost:8000/deleteUser?email=${userInfo.username}`, {
         method: "DELETE",
@@ -435,11 +438,13 @@ const UserDashboard = () => {
                   className="flex bg-white p-6 rounded-lg shadow-md items-center w-full justify-between"
                 >
                   <div className="flex items-center gap-6 w-full">
-                    <img
-                      src={book.image_url || "https://via.placeholder.com/150x200"}
-                      alt={book.title}
-                      className="w-32 h-48 object-cover rounded-lg"
-                    />
+                    <Link href={`user/${email}/book/${book.id}`} className="group">
+                      <img
+                        src={book.image_url || "https://via.placeholder.com/150x200"}
+                        alt={book.title}
+                        className="w-32 h-48 object-cover rounded-lg group-hover:opacity-90 transition cursor-pointer"
+                      />
+                    </Link>
                     <div className="flex-1">
                     <div className="flex items-center gap-4">
                       <h2 className="text-xl font-bold">{book.title}</h2>
