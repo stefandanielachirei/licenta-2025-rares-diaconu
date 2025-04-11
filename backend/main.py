@@ -29,7 +29,7 @@ app.add_middleware(
 app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
 
-SERVER_URL = "http://192.168.251.219:8000/analyze-sentiment"
+SENTIMENT_URL = "http://192.168.251.219:8000/analyze-sentiment"
 SUMMARIZATION_SERVER_URL = "http://192.168.251.219:8000/summarize_reviews"
 
 class ReviewRequest(BaseModel):
@@ -38,7 +38,7 @@ class ReviewRequest(BaseModel):
 @app.post("/sentiment_analysis")
 async def sentiment_analysis(request: ReviewRequest):
     payload = {"review": request.review}
-    response = requests.post(SERVER_URL, json=payload)
+    response = requests.post(SENTIMENT_URL, json=payload)
 
     if response.status_code == 200:
         return response.json()
@@ -580,4 +580,76 @@ def live_summaries_for_book(
             for r, s in zip(reviews, summaries)
         ]
     }
+
+@app.get("/books/{book_id}/reviews_sentiment")
+def reviews_sentiment_analysis(
+    request: Request,
+    book_id: int,
+    user_email: str = Query(..., alias="user_email"),
+    page: int = 1,
+    items_per_page: int = 4,
+    db: Session = Depends(get_db)
+):
+    validate_user_role(request=request)
+
+    if page < 1 or items_per_page <= 0:
+        raise HTTPException(status_code=422, detail="Invalid pagination")
+
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    user_review = (
+        db.query(Review)
+        .filter(Review.book_id == book_id, Review.user_email == user_email)
+        .first()
+    )
+
+    reviews_query = db.query(Review).filter(
+        Review.book_id == book_id,
+        Review.user_email != user_email if user_review else True
+    )
+
+    total = reviews_query.count() + (1 if user_review else 0)
+    skip = (page - 1) * items_per_page
+
+    reviews = []
+    if page == 1 and user_review:
+        reviews.append(user_review)
+        remaining_limit = items_per_page - 1
+        additional_reviews = reviews_query.limit(remaining_limit).all()
+        reviews.extend(additional_reviews)
+    else:
+        offset_value = skip - (1 if user_review and page > 1 else 0)
+        reviews = reviews_query.offset(offset_value).limit(items_per_page).all()
+
+    texts = [r.review_text for r in reviews]
+
+    payload = {
+        "texts": texts
+    }
+
+    try:
+        response = requests.post(SENTIMENT_URL, json=payload, timeout=60)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Sentiment analysis error: {e}")
+
+    sentiments = response.json()["sentiments"]
+
+    return {
+        "total": total,
+        "page": page,
+        "items_per_page": items_per_page,
+        "reviews": [
+            {
+                "review_id": r.id,
+                "text": s["text"],
+                "label": s["label"],
+                "score": round(s["score"], 4)
+            }
+            for r, s in zip(reviews, sentiments)
+        ]
+    }
+
 
