@@ -1,0 +1,97 @@
+from fastapi import FastAPI
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import PeftModel
+from schemas import ReviewRequest, ReviewInput
+from fastapi.responses import JSONResponse
+import torch
+import os
+
+app = FastAPI()
+
+device = 0 if torch.cuda.is_available() else -1
+
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+base_model_path = "Meta-LLaMA/LLaMA-3.2-1B"
+lora_model_path = "./model_trained"
+
+tokenizer = AutoTokenizer.from_pretrained(base_model_path, token=HF_TOKEN)
+tokenizer.pad_token = tokenizer.eos_token
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16
+) if device == "cuda" else None
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    base_model_path,
+    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+    device_map="auto" if device == "cuda" else None,
+    quantization_config=bnb_config,
+    token=HF_TOKEN
+)
+
+llama_model = PeftModel.from_pretrained(base_model, lora_model_path)
+llama_model.to(device)
+llama_model.eval()
+torch.cuda.empty_cache()
+
+def llama_summarize(text: str) -> str:
+    prompt = f"Summarize the following text in a clear and concise sentence:\n\n{text.strip()}"
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
+
+    with torch.no_grad():
+        outputs = llama_model.generate(
+            inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=40,
+            temperature=0.8,
+            top_p=0.9,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return summary.replace(prompt, "").strip()
+
+long_summary_pipeline = pipeline("summarization", model="facebook/bart-large-cnn", device=device)
+
+@app.post("/summarize_reviews")
+def summarize_reviews(payload: ReviewInput):
+    results = []
+
+    for text in payload.texts:
+        token_count = len(text.split())
+
+        if token_count < payload.max_tokens_threshold:
+            summary = llama_summarize(text)
+            method = "llama_custom"
+        else:
+            summary = long_summary_pipeline(text, max_length=100, min_length=40, do_sample=False)[0]["summary_text"]
+            method = "bart"
+
+        results.append({
+            "original": text,
+            "summary": summary,
+            "method": method
+        })
+
+    return JSONResponse(
+        status_code=201,
+        content={"summaries": results}
+    )
+
+model_name_sentiment = "distilbert-base-uncased-finetuned-sst-2-english"
+sentiment_pipeline = pipeline(
+    "sentiment-analysis",
+    model=model_name_sentiment,
+    device=device,
+    torch_dtype=torch.float16 if device == 0 else None
+)
+
+@app.post("/analyze-sentiment")
+async def analyze_sentiment(request: ReviewRequest):
+    result = sentiment_pipeline(request.review)
+    return {"label": result[0]["label"], "score": result[0]["score"]}
+
+# Rulează serverul: uvicorn server:app --host 0.0.0.0 --port 8000

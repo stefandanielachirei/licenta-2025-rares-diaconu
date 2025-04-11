@@ -513,6 +513,7 @@ def get_reviews_by_user(request: Request, email: str = Query(...), db: Session =
 def live_summaries_for_book(
     request : Request,
     book_id: int,
+    user_email: str = Query(..., alias="user_email"),
     page: int = 1, 
     items_per_page: int = 4,
     db: Session = Depends(get_db)
@@ -526,11 +527,29 @@ def live_summaries_for_book(
     book = db.query(Book).filter(Book.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+    
+    user_review = (
+        db.query(Review)
+        .filter(Review.book_id == book_id, Review.user_email == user_email)
+        .first()
+    )
 
-    reviews_query = db.query(Review).filter(Review.book_id == book_id)
-    total = reviews_query.count()
+    reviews_query = db.query(Review).filter(
+        Review.book_id == book_id,
+        Review.user_email != user_email if user_review else True
+    )
+
+    total = reviews_query.count() + (1 if user_review else 0)
     skip = (page - 1) * items_per_page
-    reviews = reviews_query.offset(skip).limit(items_per_page).all()
+
+    reviews = []
+    if page == 1 and user_review:
+        reviews.append(user_review)
+        remaining_limit = items_per_page - 1
+        additional_reviews = reviews_query.limit(remaining_limit).all()
+        reviews.extend(additional_reviews)
+    else:
+        reviews = reviews_query.offset(skip - (1 if user_review and page > 1 else 0)).limit(items_per_page).all()
 
     texts = [r.review_text for r in reviews]
 

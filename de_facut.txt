@@ -24,7 +24,7 @@ chestii pentru luni:
 	- de facut pagina de to_read - facut
 	- de modificat isbn-urile din books.csv ca sa fie cele bune de pe openlibrary pentru a adauga mai multe carti - facut
 	- la carti la admin de refacut functia din backend, facut una noua pentru admin - facut
-	- de facut pe pagina cu carti la fiecare carte sumarurile review-urilor paginate cele mai mici de x tokeni cu cel antrenat, cele mai mari cu unul importat
+	- de facut pe pagina cu carti la fiecare carte sumarurile review-urilor paginate cele mai mici de x tokeni cu cel antrenat, cele mai mari cu unul importat - facut in backend
 	- cand apasa pe coperta sau titlu sa se duca pe pagina cartii unde vor fi toate review-urile paginate si in stanga va fi sentiment analysis la fiecare review si
 similaritatea cumva sa fie folosita la final intre review-uri
 	- cu review-urile la carti sumarizate si sa poata apasa pe carte sa il duca pe pagina cartii unde vor fi review-urile complete si cu sentiment analysis
