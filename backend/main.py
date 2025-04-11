@@ -2,14 +2,15 @@ from fastapi import FastAPI, HTTPException, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import get_db, engine
-import models
-import requests
 from fastapi.responses import JSONResponse
 from models import User, Book, Review, UserBook
 from schemas import PromptRequest, UserCreateRequest, BookCreate, BookUpdate, StatusUpdate, ReviewCreate, ReviewDelete
 from middleware import TokenValidationMiddleware
-from pydantic import BaseModel
 from typing import Optional
+from dotenv import load_dotenv
+import models
+import requests
+import os
 
 app = FastAPI(
     title="Web application similar with goodreads using natural language processing(NLP) and RESTFul APIs",
@@ -26,24 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+load_dotenv()
+
 app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
 
-SENTIMENT_URL = "http://192.168.251.219:8000/analyze-sentiment"
-SUMMARIZATION_SERVER_URL = "http://192.168.251.219:8000/summarize_reviews"
-
-class ReviewRequest(BaseModel):
-    review: str
-
-@app.post("/sentiment_analysis")
-async def sentiment_analysis(request: ReviewRequest):
-    payload = {"review": request.review}
-    response = requests.post(SENTIMENT_URL, json=payload)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {"error": response.text, "status_code": response.status_code}
+SENTIMENT_URL = os.getenv("SENTIMENT_URL")
+SUMMARIZATION_SERVER_URL = os.getenv("SUMMARIZATION_SERVER_URL")
+SIMILARITY_SERVER_URL = os.getenv("SIMILARITY_SERVER_URL")
 
 def sanitize_dict(obj):
     return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
@@ -652,5 +643,47 @@ def reviews_sentiment_analysis(
             for r, s in zip(reviews, sentiments)
         ]
     }
+
+@app.get("/books/{book_id}/top-dissimilar")
+def get_top_dissimilar_reviews_for_book(request: Request, book_id: int, db: Session = Depends(get_db)):
+
+    validate_user_role(request=request)
+
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+
+    reviews = db.query(Review).filter(Review.book_id == book_id).all()
+
+    if not reviews:
+        raise HTTPException(status_code=404, detail="No reviews found for this book")
+
+    texts = [review.review_text for review in reviews]
+
+    try:
+        response = requests.post(SIMILARITY_SERVER_URL, json={"texts": texts}, timeout=60)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Similarity server error: {e}")
+
+    data = response.json()
+    top_indices = data.get("indices", [])
+
+    top_dissimilar = []
+    seen_ids = set()
+
+    for idx in top_indices:
+        if 0 <= idx < len(reviews):
+            review = reviews[idx]
+            if review.id not in seen_ids:
+                top_dissimilar.append({
+                    "review_id": review.id,
+                    "text": review.review_text
+                })
+                seen_ids.add(review.id)
+
+    return {"top_dissimilar_reviews": top_dissimilar}
+
 
 

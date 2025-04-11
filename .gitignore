@@ -10,3 +10,4 @@ test.py
 books_200.csv
 updated_books.csv
 backend/updated_books.csv
+backend/.env
