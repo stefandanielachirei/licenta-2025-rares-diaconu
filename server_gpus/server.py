@@ -137,24 +137,35 @@ similarity_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 @app.post("/most-dissimilar")
 def most_dissimilar_reviews(request: TextsRequest):
     texts = request.texts
-
     if len(texts) < 5:
         raise HTTPException(status_code=400, detail="Need at least 5 reviews")
-
-    embeddings = similarity_model.encode(texts)
-
+    
+    valid_indices = [i for i, text in enumerate(texts) if len(text.split()) >= 50]
+    
+    if len(valid_indices) < 5:
+        valid_indices = [i for i, text in enumerate(texts) if len(text.split()) >= 25]
+        
+        if len(valid_indices) < 5:
+            valid_indices = [i for i, text in enumerate(texts) if len(text.split()) >= 10]
+            
+            if len(valid_indices) < 5:
+                valid_indices = list(range(len(texts)))
+    
+    valid_texts = [texts[i] for i in valid_indices]
+    embeddings = similarity_model.encode(valid_texts)
+    
     sim_matrix = cosine_similarity(embeddings)
-
     dissim_matrix = 1 - sim_matrix
     np.fill_diagonal(dissim_matrix, 0)
-
     scores = dissim_matrix.mean(axis=1)
-
-    top_indices = np.argsort(scores)[-5:][::-1]
-
+    
+    top_valid_indices = np.argsort(scores)[-5:][::-1]
+    
+    top_indices = [valid_indices[i] for i in top_valid_indices]
+    
     return JSONResponse(
         status_code=201,
-        content={"indices": top_indices.tolist()}
+        content={"indices": top_indices}
     )
 
 # Rulează serverul: uvicorn server:app --host 0.0.0.0 --port 8000

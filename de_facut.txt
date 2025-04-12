@@ -26,8 +26,8 @@ chestii pentru luni:
 	- la carti la admin de refacut functia din backend, facut una noua pentru admin - facut
 	- review-ul propriu sa fie primul pe pagina principala si a cartii la review-uri si rezumate - facut
 	- de facut pe pagina cu carti la fiecare carte sumarurile review-urilor paginate cele mai mici de x tokeni cu cel antrenat, cele mai mari cu unul importat - facut
-	- cand apasa pe coperta sau titlu sa se duca pe pagina cartii unde vor fi toate review-urile paginate si in stanga va fi sentiment analysis la fiecare review  - facut in backend si se duce pe pagina care trebuie in fe
-	- similaritatea - sa fie review-urile filtrate dupa cat de nesimilare sunt - un top 5 pe alta pagina posibil - facut in backend
+	- cand apasa pe coperta sau titlu sa se duca pe pagina cartii unde vor fi toate review-urile paginate si in stanga va fi sentiment analysis la fiecare review  - facut
+	- similaritatea - sa fie review-urile filtrate dupa cat de nesimilare sunt - un top 5 pe alta pagina posibil - facut
 	- pune nginx la final inapoi
 
   nginx:
