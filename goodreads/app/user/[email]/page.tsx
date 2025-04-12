@@ -37,10 +37,12 @@ const UserDashboard = () => {
   const itemsPerPageAllBooks = 2;
   const itemsPerPageToReadBooks = 4;
   const itemsPerPageReadBooks = 4;
+  const [loggedOut, setLoggedOut] = useState(false);
   const [summaryPages, setSummaryPages] = useState<{ [bookId: number]: number }>({});
   const [summariesByBook, setSummariesByBook] = useState<{ [bookId: number]: any }>({});
   const itemsPerSummaryPage = 3;
   var email = "";
+  let tokenInvalidated = false;
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormDataChangePassword({ ...formDataChangePassword, [e.target.name]: e.target.value });
@@ -101,6 +103,7 @@ const UserDashboard = () => {
   };
 
   const fetchSummariesForBook = async (bookId: number, page: number) => {
+    if (loggedOut) return;
     try {
       const token = window.localStorage.getItem("token");
       if (!token) throw new Error("Authentication token is missing");
@@ -113,6 +116,11 @@ const UserDashboard = () => {
       });
   
       if (!validateResponse.ok) {
+        if (validateResponse.status === 401) {
+          window.localStorage.removeItem("token");
+          setLoggedOut(true);
+          return;
+        }
         throw new Error("Token validation failed");
       }
   
@@ -133,7 +141,14 @@ const UserDashboard = () => {
         },
       });
   
-      if (!response.ok) throw new Error("Failed to fetch summaries");
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.localStorage.removeItem("token");
+          setLoggedOut(true);
+          return;
+        }
+        throw new Error("Failed to fetch summaries");
+      }
   
       const data = await response.json();
       setSummariesByBook((prev) => ({
@@ -145,7 +160,14 @@ const UserDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    if (loggedOut) {
+      window.location.href = '/';
+    }
+  }, [loggedOut]);
+
   const handleSummaryPageChange = async (bookId: number, direction: "prev" | "next") => {
+    if (loggedOut) return;
     const currentPage = summaryPages[bookId] || 1;
     const newPage = direction === "prev" ? Math.max(1, currentPage - 1) : currentPage + 1;
   
@@ -153,18 +175,24 @@ const UserDashboard = () => {
       ...prev,
       [bookId]: newPage,
     }));
+
+    const token = window.localStorage.getItem("token");
+    if (!token) {
+      window.location.href = '/';
+    }
   
     await fetchSummariesForBook(bookId, newPage);
   };
 
   useEffect(() => {
+    if (loggedOut) return;
     books.forEach((book: any) => {
       const currentPage = summaryPages[book.id] || 1;
       if (!summariesByBook[book.id]) {
         fetchSummariesForBook(book.id, currentPage);
       }
     });
-  }, [books]);
+  }, [books, loggedOut]);
   
   
 
@@ -458,9 +486,13 @@ const UserDashboard = () => {
 
       const data = await response.json();
       alert(data.message || "Successfully logged out.");
-
+      setLoggedOut(true);
+      setBooks([]);
+      setSummariesByBook({});
       window.localStorage.removeItem("token");
-      router.push(`/`);
+      setTimeout(() => {
+        router.push(`/`);
+      }, 50);
 
     }catch (err: any) {
       alert(`Error: ${err.message}`);

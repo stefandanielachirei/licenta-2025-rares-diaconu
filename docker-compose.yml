@@ -99,7 +99,6 @@ services:
     networks:
       - mynetwork
 
-
 volumes:
   db_data:
   db_data_idm:
