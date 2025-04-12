@@ -89,31 +89,31 @@ export default function BookPage() {
   }, [bookId, page]);  
 
   return (
-    <div className="min-h-screen bg-pink-50 flex gap-6 p-6">
+    <div className="min-h-screen flex gap-6 p-6 bg-gradient-to-br from-purple-300 via-purple-100 to-white">
       <div className="w-3/4 space-y-6">
         {book && (
-          <div className="flex bg-white p-6 rounded-lg shadow-md items-center max-w-[900px] gap-6">
+          <div className="flex bg-white p-6 rounded-lg shadow-md items-center max-w-[900px] ml-4">
             <img
               src={book.image_url || 'https://via.placeholder.com/200x300'}
               alt={book.title}
               className="w-40 h-60 object-cover rounded-lg"
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold">{book.title}</h2>
-              <p className="text-gray-600">Author: {book.author}</p>
-              <p className="text-gray-600">ISBN: {book.isbn}</p>
+              <h2 className="text-xl font-bold ml-4">{book.title}</h2>
+              <p className="text-gray-600 ml-4">Author: {book.author}</p>
+              <p className="text-gray-600 ml-4">ISBN: {book.isbn}</p>
             </div>
           </div>
         )}
   
-        <div className="bg-white p-6 rounded-lg shadow-md max-w-[750px] mx-auto">
+        <div className="bg-white p-6 rounded-lg shadow-md max-w-[900px] ml-4">
           <h2 className="text-lg font-semibold text-purple-700 mb-4">All Reviews</h2>
           <div className="space-y-4">
             {reviews.map((r: any) => (
               <div key={r.review_id} className="bg-gray-100 p-4 rounded shadow-sm">
                 <div className="flex justify-between items-start">
                   <p className="text-gray-800 text-sm italic max-w-[85%]">“{r.text}”</p>
-                  <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                  <span className="text-xs font-semibold px-2 py-1 bg-purple-200 text-purple-800 rounded-full shadow-sm">
                     {r.fine_label}
                   </span>
                 </div>
