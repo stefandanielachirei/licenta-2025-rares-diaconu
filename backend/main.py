@@ -94,7 +94,7 @@ def create_book(request: Request, book : BookCreate, db: Session = Depends(get_d
 @app.get("/books/{book_id}")
 def get_book(request: Request, book_id: int, db: Session = Depends(get_db)):
 
-    validate_admin_role(request=request)
+    validate_user_role(request=request)
 
     book = db.query(Book).filter(Book.id == book_id).first()
     if not book:
@@ -303,24 +303,6 @@ def delete_review(request: Request, review_id: int, db: Session = Depends(get_db
         "message": "Review deleted successfully"
     }
     return JSONResponse(status_code=200, content=response_data)
-
-@app.post("/generate_text")
-def generate_text(request: PromptRequest) :
-    prompt = request.prompt
-    response = requests.post("http://nlp_model:8001/generate", json={"prompt":prompt})
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise HTTPException(status_code=response.status_code, detail="Error generating text")
-    
-@app.get("/books")
-def get_books(db: Session = Depends(get_db)):
-    return db.query(Book).limit(10).all()
-
-@app.get("/reviews")
-def get_reviews(db: Session = Depends(get_db)):
-    reviews = db.query(Review).limit(10).all()
-    return reviews
 
 @app.post("/update_status")
 def update_status(request: Request, data: StatusUpdate, db: Session = Depends(get_db)):

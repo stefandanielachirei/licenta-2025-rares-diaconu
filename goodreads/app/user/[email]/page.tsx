@@ -506,9 +506,9 @@ const UserDashboard = () => {
               {books.map((book: any) => (
                 <div
                   key={book.id}
-                  className="flex bg-white p-6 rounded-lg shadow-md items-center w-full justify-between"
+                  className="flex bg-white p-6 rounded-lg shadow-md items-start w-full gap-6"
                 >
-                  <div className="flex items-center gap-6 w-full">
+                  <div className="flex flex-col items-center">
                     <Link href={`user/${email}/book/${book.id}`} className="group">
                       <img
                         src={book.image_url || "https://via.placeholder.com/150x200"}
@@ -516,53 +516,53 @@ const UserDashboard = () => {
                         className="w-36 h-56 object-cover rounded-lg group-hover:opacity-90 transition cursor-pointer"
                       />
                     </Link>
-                    <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-bold">{book.title}</h2>
-                      <select
-                        value={book.status}
-                        onChange={(e) => handleStatusChange(book.id, e.target.value)}
-                        className="px-3 py-2 border rounded-lg bg-gray-100 text-sm"
-                      >
-                        <option value="none">None</option>
-                        <option value="read">Read</option>
-                        <option value="to_read">To Read</option>
-                      </select>
-                    </div>
-                      <p className="text-gray-600">Author: {book.author}</p>
-                      <p className="text-gray-600">ISBN: {book.isbn}</p>
-                    </div>
-                    {summariesByBook[book.id]?.summaries?.length > 0 && (
-                    <div className="mt-4 bg-gray-100 p-4 rounded-lg flex-1">
-                      <h3 className="font-semibold mb-2 text-purple-700">Review Summaries:</h3>
-                      
-                      {summariesByBook[book.id].summaries.map((summary: any) => (
-                        <div key={summary.review_id} className="bg-white p-3 rounded mt-3 shadow-sm border">
-                          <p className="text-sm text-gray-700 italic mb-1">“{summary.summary}”</p>
-                        </div>
-                      ))}
+                    <select
+                      value={book.status}
+                      onChange={(e) => handleStatusChange(book.id, e.target.value)}
+                      className="mt-4 px-3 py-2 border rounded-lg bg-gray-100 text-sm"
+                    >
+                      <option value="none">None</option>
+                      <option value="read">Read</option>
+                      <option value="to_read">To Read</option>
+                    </select>
+                  </div>
 
-                      <div className="flex justify-end gap-2 mt-4">
-                        <button
-                          onClick={() => handleSummaryPageChange(book.id, "prev")}
-                          disabled={(summaryPages[book.id] || 1) === 1}
-                          className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
-                        >
-                          Prev
-                        </button>
-                        <button
-                          onClick={() => handleSummaryPageChange(book.id, "next")}
-                          disabled={
-                            summariesByBook[book.id] &&
-                            (summaryPages[book.id] || 1) * itemsPerSummaryPage >= summariesByBook[book.id].total
-                          }
-                          className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
-                        >
-                          Next
-                        </button>
+                  <div className="flex flex-col flex-1">
+                    <h2 className="text-xl font-bold mb-1">{book.title}</h2>
+                    <p className="text-gray-600 mb-1">Author: {book.author}</p>
+                    <p className="text-gray-600 mb-4">ISBN: {book.isbn}</p>
+
+                    {summariesByBook[book.id]?.summaries?.length > 0 && (
+                      <div className="bg-gray-100 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2 text-purple-700">Review Summaries:</h3>
+
+                        {summariesByBook[book.id].summaries.map((summary: any) => (
+                          <div key={summary.review_id} className="bg-white p-3 rounded mt-3 shadow-sm border">
+                            <p className="text-sm text-gray-700 italic mb-1">“{summary.summary}”</p>
+                          </div>
+                        ))}
+
+                        <div className="flex justify-end gap-2 mt-4">
+                          <button
+                            onClick={() => handleSummaryPageChange(book.id, "prev")}
+                            disabled={(summaryPages[book.id] || 1) === 1}
+                            className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            onClick={() => handleSummaryPageChange(book.id, "next")}
+                            disabled={
+                              summariesByBook[book.id] &&
+                              (summaryPages[book.id] || 1) * itemsPerSummaryPage >= summariesByBook[book.id].total
+                            }
+                            className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
+                          >
+                            Next
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                   </div>
                 </div>
               ))}
@@ -587,7 +587,7 @@ const UserDashboard = () => {
               </button>
             </div>
           </div>
-        )     
+        )
       case "to_read":
         return (
           <div>
