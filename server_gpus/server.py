@@ -60,18 +60,18 @@ def llama_summarize(text: str) -> str:
 def label_from_score(label, score):
     if label == "POSITIVE":
         if score > 0.9:
-            return "very_positive"
+            return "VERY POSITIVE"
         elif score > 0.7:
-            return "positive"
+            return "POSITIVE"
         else:
-            return "neutral"
+            return "NEUTRAL"
     else:
         if score > 0.9:
-            return "very_negative"
+            return "VERY NEGATIVE"
         elif score > 0.7:
-            return "negative"
+            return "NEGATIVE"
         else:
-            return "neutral"
+            return "NEUTRAL"
 
 long_summary_pipeline = pipeline("summarization", model="facebook/bart-large-cnn", device=device)
 
