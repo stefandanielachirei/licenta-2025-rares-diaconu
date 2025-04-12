@@ -28,3 +28,7 @@ chestii pentru luni:
 	- de facut pe pagina cu carti la fiecare carte sumarurile review-urilor paginate cele mai mici de x tokeni cu cel antrenat, cele mai mari cu unul importat - facut
 	- cand apasa pe coperta sau titlu sa se duca pe pagina cartii unde vor fi toate review-urile paginate si in stanga va fi sentiment analysis la fiecare review  - facut
 	- similaritatea - sa fie review-urile filtrate dupa cat de nesimilare sunt - un top 5 pe alta pagina posibil - facut
+	- problema stergere review din admin - facut
+	- problema adaugare review si sentiment analysis - facut
+	- sa fac update si delete la review-ul personal - facut
+	- merge sa adaug un review si sa se faca rezumat si sentiment analysis - facut

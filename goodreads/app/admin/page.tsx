@@ -173,7 +173,7 @@ const AdminDashboard = () => {
         throw new Error("Authentication token is missing");
       }
 
-      const review = books.find((review: any) => review.id === reviewId);
+      const review = reviews.find((review: any) => review.id === reviewId);
       if (!review) {
         throw new Error("Review not found");
       }

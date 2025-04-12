@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 export default function BookPage() {
   const { id } = useParams();
@@ -19,6 +20,7 @@ export default function BookPage() {
   const [page, setPage] = useState(1);
   const [topDissimilar, setTopDissimilar] = useState([]);
   const itemsPerPage = 4;
+  const router = useRouter();
 
   const fetchBook = async () => {
     try {
@@ -117,7 +119,48 @@ export default function BookPage() {
   
   useEffect(() => {
     fetchBook();
-  }, [bookId, page]);  
+  }, [bookId, page]);
+
+  const handleDeleteReview = async () => {
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token is missing");
+  
+      const validateRes = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      if (!validateRes.ok) throw new Error("Failed to validate token");
+      const userInfo = await validateRes.json();
+  
+      const response = await fetch("http://localhost:8000/delete_review", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          book_id: bookId,
+          user_email: userInfo.username,
+        }),
+      });
+  
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "Failed to delete review");
+      }
+  
+      const data = await response.json();
+      alert(data.message || "Review deleted successfully");
+  
+      fetchBook();
+  
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+  
 
   return (
     <div className="min-h-screen flex gap-6 p-6 bg-gradient-to-br from-purple-300 via-purple-100 to-white">
@@ -130,7 +173,23 @@ export default function BookPage() {
               className="w-40 h-60 object-cover rounded-lg"
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold ml-4">{book.title}</h2>
+            <div className="flex items-center ml-4 gap-4 justify-between">
+            <h2 className="text-xl font-bold">{book.title}</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => router.push(`${bookId}/update-review?book_id=${bookId}`)}
+                className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm shadow-md hover:bg-blue-600"
+              >
+                Edit Review
+              </button>
+              <button
+                onClick={handleDeleteReview}
+                className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm shadow-md hover:bg-red-600"
+              >
+                Delete Review
+              </button>
+            </div>
+            </div>
               <p className="text-gray-600 ml-4">Author: {book.author}</p>
               <p className="text-gray-600 ml-4">ISBN: {book.isbn}</p>
             </div>
