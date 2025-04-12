@@ -37,6 +37,9 @@ const UserDashboard = () => {
   const itemsPerPageAllBooks = 2;
   const itemsPerPageToReadBooks = 4;
   const itemsPerPageReadBooks = 4;
+  const [summaryPages, setSummaryPages] = useState<{ [bookId: number]: number }>({});
+  const [summariesByBook, setSummariesByBook] = useState<{ [bookId: number]: any }>({});
+  const itemsPerSummaryPage = 3;
   var email = "";
 
   const handleInputChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +99,74 @@ const UserDashboard = () => {
       console.error(error);
     }
   };
+
+  const fetchSummariesForBook = async (bookId: number, page: number) => {
+    try {
+      const token = window.localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token is missing");
+  
+      const validateResponse = await fetch("http://localhost:8080/validate", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!validateResponse.ok) {
+        throw new Error("Token validation failed");
+      }
+  
+      const userInfo = await validateResponse.json();
+      const email = userInfo.username;
+  
+      const params = new URLSearchParams({
+        user_email: email,
+        page: page.toString(),
+        items_per_page: itemsPerSummaryPage.toString(),
+      });
+  
+      const response = await fetch(`http://localhost:8000/books/${bookId}/summaries_live?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+  
+      if (!response.ok) throw new Error("Failed to fetch summaries");
+  
+      const data = await response.json();
+      setSummariesByBook((prev) => ({
+        ...prev,
+        [bookId]: data,
+      }));
+    } catch (error) {
+      console.error("Error fetching summary for book", bookId, error);
+    }
+  };
+
+  const handleSummaryPageChange = async (bookId: number, direction: "prev" | "next") => {
+    const currentPage = summaryPages[bookId] || 1;
+    const newPage = direction === "prev" ? Math.max(1, currentPage - 1) : currentPage + 1;
+  
+    setSummaryPages((prev) => ({
+      ...prev,
+      [bookId]: newPage,
+    }));
+  
+    await fetchSummariesForBook(bookId, newPage);
+  };
+
+  useEffect(() => {
+    books.forEach((book: any) => {
+      const currentPage = summaryPages[book.id] || 1;
+      if (!summariesByBook[book.id]) {
+        fetchSummariesForBook(book.id, currentPage);
+      }
+    });
+  }, [books]);
+  
+  
 
   const handleStatusChange = async (bookId: number, newStatus: string) => {
     try {
@@ -442,7 +513,7 @@ const UserDashboard = () => {
                       <img
                         src={book.image_url || "https://via.placeholder.com/150x200"}
                         alt={book.title}
-                        className="w-32 h-48 object-cover rounded-lg group-hover:opacity-90 transition cursor-pointer"
+                        className="w-36 h-56 object-cover rounded-lg group-hover:opacity-90 transition cursor-pointer"
                       />
                     </Link>
                     <div className="flex-1">
@@ -461,6 +532,37 @@ const UserDashboard = () => {
                       <p className="text-gray-600">Author: {book.author}</p>
                       <p className="text-gray-600">ISBN: {book.isbn}</p>
                     </div>
+                    {summariesByBook[book.id]?.summaries?.length > 0 && (
+                    <div className="mt-4 bg-gray-100 p-4 rounded-lg flex-1">
+                      <h3 className="font-semibold mb-2 text-purple-700">Review Summaries:</h3>
+                      
+                      {summariesByBook[book.id].summaries.map((summary: any) => (
+                        <div key={summary.review_id} className="bg-white p-3 rounded mt-3 shadow-sm border">
+                          <p className="text-sm text-gray-700 italic mb-1">“{summary.summary}”</p>
+                        </div>
+                      ))}
+
+                      <div className="flex justify-end gap-2 mt-4">
+                        <button
+                          onClick={() => handleSummaryPageChange(book.id, "prev")}
+                          disabled={(summaryPages[book.id] || 1) === 1}
+                          className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          onClick={() => handleSummaryPageChange(book.id, "next")}
+                          disabled={
+                            summariesByBook[book.id] &&
+                            (summaryPages[book.id] || 1) * itemsPerSummaryPage >= summariesByBook[book.id].total
+                          }
+                          className="px-3 py-1 rounded bg-purple-500 text-white text-sm disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               ))}
