@@ -79,35 +79,58 @@ export default function AddReviewPage() {
 
   return (
     <div className="min-h-screen w-screen bg-gradient-to-b from-blue-100 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-10 w-[500px]">
-            <h2 className="text-indigo-700 text-center text-3xl font-bold mb-8">Add Review</h2>
-            {successMessage && (
-                <p className="text-green-600 text-center mb-4 font-medium">{successMessage}</p>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-                <label className="block text-base font-medium text-gray-700 mb-1">Review Text</label>
-                <textarea
-                name="review_text"
-                value={formData.review_text}
-                onChange={handleInputChange}
-                required
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                rows={6}
-                />
-            </div>
-            <button
-                type="submit"
-                disabled={loading}
-                className={`w-full bg-indigo-700 text-white rounded-lg px-6 py-3 font-medium text-lg hover:bg-indigo-800 transition ${
-                loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-            >
-                {loading ? "Saving..." : "Add Review"}
-            </button>
-            {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
-            </form>
-        </div>
+      <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-[650px] relative">
+        <button
+          onClick={() => router.back()}
+          className="absolute top-6 left-6 text-indigo-700 hover:text-indigo-900 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 mr-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span className="font-medium">Back</span>
+        </button>
+
+        <h2 className="text-indigo-700 text-3xl font-bold text-center mb-8">Add Review</h2>
+
+        {successMessage && (
+          <p className="text-green-600 text-center mb-4 font-medium">{successMessage}</p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-1">Review Text</label>
+            <textarea
+              name="review_text"
+              value={formData.review_text}
+              onChange={handleInputChange}
+              required
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+              rows={6}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full bg-indigo-700 text-white rounded-lg px-6 py-3 font-medium text-lg hover:bg-indigo-800 transition ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {loading ? "Saving..." : "Add Review"}
+          </button>
+          {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
+        </form>
+      </div>
     </div>
   );
 }

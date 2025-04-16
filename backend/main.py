@@ -516,15 +516,21 @@ def live_summaries_for_book(
     skip = (page - 1) * items_per_page
 
     reviews = []
-    if page == 1 and user_review:
-        reviews.append(user_review)
-        remaining_limit = items_per_page - 1
+    if page == 1:
+        if user_review:
+            reviews.append(user_review)
+            remaining_limit = items_per_page - 1
+        else:
+            remaining_limit = items_per_page
+
         additional_reviews = reviews_query.limit(remaining_limit).all()
         reviews.extend(additional_reviews)
     else:
-        reviews = reviews_query.offset(skip - (1 if user_review and page > 1 else 0)).limit(items_per_page).all()
+        offset_value = skip - (1 if user_review and page > 1 else 0)
+        reviews = reviews_query.offset(offset_value).limit(items_per_page).all()
 
-    texts = [r.review_text for r in reviews]
+
+    texts = [r.review_text for r in reviews if r.review_text]
 
     payload = {
         "texts": texts,
@@ -587,16 +593,20 @@ def reviews_sentiment_analysis(
     skip = (page - 1) * items_per_page
 
     reviews = []
-    if page == 1 and user_review:
-        reviews.append(user_review)
-        remaining_limit = items_per_page - 1
+    if page == 1:
+        if user_review:
+            reviews.append(user_review)
+            remaining_limit = items_per_page - 1
+        else:
+            remaining_limit = items_per_page
+
         additional_reviews = reviews_query.limit(remaining_limit).all()
         reviews.extend(additional_reviews)
     else:
         offset_value = skip - (1 if user_review and page > 1 else 0)
         reviews = reviews_query.offset(offset_value).limit(items_per_page).all()
 
-    texts = [r.review_text for r in reviews]
+    texts = [r.review_text.strip() for r in reviews if r.review_text and r.review_text.strip()]
 
     payload = {
         "texts": texts
@@ -666,6 +676,29 @@ def get_top_dissimilar_reviews_for_book(request: Request, book_id: int, db: Sess
                 seen_ids.add(review.id)
 
     return {"top_dissimilar_reviews": top_dissimilar}
+
+@app.get("/books/{book_id}/user-review")
+def get_user_review_for_book(
+    request: Request,
+    book_id: int,
+    user_email: str = Query(..., alias="user_email"),
+    db: Session = Depends(get_db)
+):
+    validate_user_role(request=request)
+
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    review = db.query(Review).filter(
+        Review.book_id == book_id,
+        Review.user_email == user_email
+    ).first()
+
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    return sanitize_dict(review)
 
 
 

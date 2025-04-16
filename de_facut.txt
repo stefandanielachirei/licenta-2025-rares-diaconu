@@ -32,3 +32,5 @@ chestii pentru luni:
 	- problema adaugare review si sentiment analysis - facut
 	- sa fac update si delete la review-ul personal - facut
 	- merge sa adaug un review si sa se faca rezumat si sentiment analysis - facut
+	- sa pun review-ul curent in edit review - facut
+	- buton de back in carte, edit review, add review - facut

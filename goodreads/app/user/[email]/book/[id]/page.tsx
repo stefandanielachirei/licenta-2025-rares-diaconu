@@ -165,15 +165,36 @@ export default function BookPage() {
   return (
     <div className="min-h-screen flex gap-6 p-6 bg-gradient-to-br from-purple-300 via-purple-100 to-white">
       <div className="w-1/2 space-y-6">
-        {book && (
-          <div className="flex bg-white p-6 rounded-lg shadow-md items-center ml-4">
-            <img
-              src={book.image_url || 'https://via.placeholder.com/200x300'}
-              alt={book.title}
-              className="w-40 h-60 object-cover rounded-lg"
-            />
-            <div className="flex-1">
-            <div className="flex items-center ml-4 gap-4 justify-between">
+      {book && (
+      <div className="flex bg-white p-6 rounded-lg shadow-md items-center ml-4 relative">
+        <img
+          src={book.image_url || 'https://via.placeholder.com/200x300'}
+          alt={book.title}
+          className="w-40 h-60 object-cover rounded-lg"
+        />
+        <div className="flex-1">
+          <button
+            onClick={() => router.back()}
+            className="text-indigo-700 hover:text-indigo-900 flex items-center mb-2 ml-4"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="font-medium text-sm">Back</span>
+          </button>
+
+          <div className="flex items-center ml-4 gap-4 justify-between">
             <h2 className="text-xl font-bold">{book.title}</h2>
             <div className="flex gap-2">
               <button
@@ -189,12 +210,12 @@ export default function BookPage() {
                 Delete Review
               </button>
             </div>
-            </div>
-              <p className="text-gray-600 ml-4">Author: {book.author}</p>
-              <p className="text-gray-600 ml-4">ISBN: {book.isbn}</p>
-            </div>
           </div>
-        )}
+          <p className="text-gray-600 ml-4">Author: {book.author}</p>
+          <p className="text-gray-600 ml-4">ISBN: {book.isbn}</p>
+        </div>
+      </div>
+    )}
         
         <div className="bg-white p-6 rounded-lg shadow-md ml-4">
           <h3 className="text-lg font-semibold text-purple-700 mb-4">
