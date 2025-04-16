@@ -108,15 +108,29 @@ sentiment_pipeline = pipeline(
     torch_dtype=torch.float16 if device == 0 else None
 )
 
+MAX_LENGTH = 512
+
 @app.post("/analyze-sentiment")
 def analyze_sentiment(payload: SentimentRequest):
+    
+    cleaned_texts = []
+    
+    for i, text in enumerate(payload.texts):
+        if text is None or not text.strip():
+            raise HTTPException(status_code=400, detail=f"Empty or invalid review at index {i}")
+        cleaned_text = text.strip()
+        if len(cleaned_text) > MAX_LENGTH:
+            cleaned_text = cleaned_text[:MAX_LENGTH]
+        cleaned_texts.append(cleaned_text)
+        
     try:
-        results = sentiment_pipeline(payload.texts)
+        results = sentiment_pipeline(cleaned_texts)
     except Exception as e:
+        print(f"Sentiment pipeline failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Model error: {e}")
 
     response = []
-    for text, result in zip(payload.texts, results):
+    for text, result in zip(cleaned_texts, results):
         label = result["label"]
         score = result["score"]
         fine_label = label_from_score(label, score)
@@ -131,6 +145,7 @@ def analyze_sentiment(payload: SentimentRequest):
         status_code=201,
         content={"sentiments": response}
     )
+
     
 similarity_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 

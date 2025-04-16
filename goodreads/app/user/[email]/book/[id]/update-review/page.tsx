@@ -50,9 +50,15 @@ export default function AddReviewPage() {
               "Authorization": `Bearer ${token}`,
             },
         });
-        if(!response.ok){
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError("You haven't written a review yet, nothing to edit.");
+            return;
+          } else {
             throw new Error(`Failed to fetch review: ${response.statusText}`);
+          }
         }
+        
         const data = await response.json();
         setReview(data);
     } catch (err: any) {
